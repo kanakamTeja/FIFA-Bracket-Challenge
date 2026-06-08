@@ -293,11 +293,106 @@ const GROUPS = {
   K:{teams:['Portugal','Colombia','DR Congo','Uzbekistan'],          flags:['🇵🇹','🇨🇴','🇨🇩','🇺🇿']},
   L:{teams:['England','Croatia','Ghana','Panama'],                   flags:['🏴󠁧󠁢󠁥󠁮󠁧󠁿','🇭🇷','🇬🇭','🇵🇦']},
 };
-const GROUP_MATCHES = {};
-Object.keys(GROUPS).forEach(g => {
-  const t = GROUPS[g].teams;
-  GROUP_MATCHES[g] = [[t[0],t[1]],[t[2],t[3]],[t[0],t[2]],[t[1],t[3]],[t[0],t[3]],[t[1],t[2]]];
-});
+// GROUP_MATCHES: each entry is [home, away, matchNumber, date]
+// Ordered exactly per the official FIFA 2026 schedule (Wikipedia source)
+const GROUP_MATCHES = {
+  A: [
+    ['Mexico',       'South Africa', 1,  'Jun 11'],
+    ['South Korea',  'Czechia',      2,  'Jun 11'],
+    ['Czechia',      'South Africa', 25, 'Jun 18'],
+    ['Mexico',       'South Korea',  28, 'Jun 18'],
+    ['Czechia',      'Mexico',       53, 'Jun 24'],
+    ['South Africa', 'South Korea',  54, 'Jun 24'],
+  ],
+  B: [
+    ['Canada',            'Bosnia & Herz.', 3,  'Jun 12'],
+    ['Qatar',             'Switzerland',    8,  'Jun 13'],
+    ['Switzerland',       'Bosnia & Herz.', 26, 'Jun 18'],
+    ['Canada',            'Qatar',          27, 'Jun 18'],
+    ['Switzerland',       'Canada',         51, 'Jun 24'],
+    ['Bosnia & Herz.',    'Qatar',          52, 'Jun 24'],
+  ],
+  C: [
+    ['Haiti',    'Scotland', 5,  'Jun 13'],
+    ['Brazil',   'Morocco',  7,  'Jun 13'],
+    ['Brazil',   'Haiti',    29, 'Jun 19'],
+    ['Scotland', 'Morocco',  30, 'Jun 19'],
+    ['Scotland', 'Brazil',   49, 'Jun 24'],
+    ['Morocco',  'Haiti',    50, 'Jun 24'],
+  ],
+  D: [
+    ['USA',       'Paraguay',  4,  'Jun 12'],
+    ['Australia', 'Türkiye',   6,  'Jun 13'],
+    ['Türkiye',   'Paraguay',  31, 'Jun 19'],
+    ['USA',       'Australia', 32, 'Jun 19'],
+    ['Türkiye',   'USA',       59, 'Jun 25'],
+    ['Paraguay',  'Australia', 60, 'Jun 25'],
+  ],
+  E: [
+    ['Ivory Coast', 'Ecuador',     9,  'Jun 14'],
+    ['Germany',     'Curaçao',     10, 'Jun 14'],
+    ['Germany',     'Ivory Coast', 33, 'Jun 20'],
+    ['Ecuador',     'Curaçao',     34, 'Jun 20'],
+    ['Curaçao',     'Ivory Coast', 55, 'Jun 25'],
+    ['Ecuador',     'Germany',     56, 'Jun 25'],
+  ],
+  F: [
+    ['Netherlands', 'Japan',       11, 'Jun 14'],
+    ['Sweden',      'Tunisia',     12, 'Jun 14'],
+    ['Netherlands', 'Sweden',      35, 'Jun 20'],
+    ['Tunisia',     'Japan',       36, 'Jun 20'],
+    ['Japan',       'Sweden',      57, 'Jun 25'],
+    ['Tunisia',     'Netherlands', 58, 'Jun 25'],
+  ],
+  G: [
+    ['Iran',        'New Zealand', 15, 'Jun 15'],
+    ['Belgium',     'Egypt',       16, 'Jun 15'],
+    ['Belgium',     'Iran',        39, 'Jun 21'],
+    ['New Zealand', 'Egypt',       40, 'Jun 21'],
+    ['Egypt',       'Iran',        63, 'Jun 26'],
+    ['New Zealand', 'Belgium',     64, 'Jun 26'],
+  ],
+  H: [
+    ['Saudi Arabia', 'Uruguay',     13, 'Jun 15'],
+    ['Spain',        'Cape Verde',  14, 'Jun 15'],
+    ['Uruguay',      'Cape Verde',  37, 'Jun 21'],
+    ['Spain',        'Saudi Arabia',38, 'Jun 21'],
+    ['Cape Verde',   'Saudi Arabia',65, 'Jun 26'],
+    ['Uruguay',      'Spain',       66, 'Jun 26'],
+  ],
+  I: [
+    ['France',  'Senegal', 17, 'Jun 16'],
+    ['Iraq',    'Norway',  18, 'Jun 16'],
+    ['Norway',  'Senegal', 41, 'Jun 22'],
+    ['France',  'Iraq',    42, 'Jun 22'],
+    ['Norway',  'France',  61, 'Jun 26'],
+    ['Senegal', 'Iraq',    62, 'Jun 26'],
+  ],
+  J: [
+    ['Argentina', 'Algeria', 19, 'Jun 16'],
+    ['Austria',   'Jordan',  20, 'Jun 16'],
+    ['Argentina', 'Austria', 43, 'Jun 22'],
+    ['Jordan',    'Algeria', 44, 'Jun 22'],
+    ['Algeria',   'Austria', 69, 'Jun 27'],
+    ['Jordan',    'Argentina',70, 'Jun 27'],
+  ],
+  K: [
+    ['Portugal',   'DR Congo',   23, 'Jun 17'],
+    ['Uzbekistan', 'Colombia',   24, 'Jun 17'],
+    ['Portugal',   'Uzbekistan', 47, 'Jun 23'],
+    ['Colombia',   'DR Congo',   48, 'Jun 23'],
+    ['Colombia',   'Portugal',   71, 'Jun 27'],
+    ['DR Congo',   'Uzbekistan', 72, 'Jun 27'],
+  ],
+  L: [
+    ['Ghana',    'Panama',  21, 'Jun 17'],
+    ['England',  'Croatia', 22, 'Jun 17'],
+    ['England',  'Ghana',   45, 'Jun 23'],
+    ['Panama',   'Croatia', 46, 'Jun 23'],
+    ['Panama',   'England', 67, 'Jun 27'],
+    ['Croatia',  'Ghana',   68, 'Jun 27'],
+  ],
+};
 const TOP_SCORERS = {
   // Group A
   'Mexico':['H. Lozano','R. Jiménez'],
@@ -695,7 +790,7 @@ function renderGroups() {
       const k = g+'_'+i, sel = state.groups?.[k], ar = adminResults.groups?.[k];
       const f0 = flags[teams.indexOf(m[0])], f1 = flags[teams.indexOf(m[1])];
       html += `<div class="match-row">
-        <span class="match-num">M${i+1}</span>
+        <span class="match-num" style="min-width:28px;text-align:center;line-height:1.2">#${m[2]}<br><span style="font-size:8px;color:var(--muted)">${m[3]}</span></span>
         <button class="team-btn${sel===0?' selected':''}" onclick="pickGroup('${g}',${i},0)">${f0} ${m[0]}</button>
         <span class="vs-badge">VS</span>
         <button class="team-btn${sel===1?' selected':''}" onclick="pickGroup('${g}',${i},1)">${f1} ${m[1]}</button>
@@ -899,7 +994,7 @@ function renderAdmin() {
           const k=g+'_'+i, res=adminResults.groups?.[k];
           const f0=flags[teams.indexOf(m[0])],f1=flags[teams.indexOf(m[1])];
           return `<div class="match-row" style="flex-wrap:wrap;gap:4px">
-            <span class="match-num" style="width:100%;font-size:9px;color:var(--muted)">M${i+1}: ${m[0]} v ${m[1]}</span>
+            <span class="match-num" style="width:100%;font-size:9px;color:var(--muted)">Match #${m[2]} · ${m[3]}: ${m[0]} v ${m[1]}</span>
             <button class="team-btn${res===0?' selected':''}" onclick="agr('${g}',${i},0)" style="font-size:10px;padding:4px">${f0} W</button>
             <button class="team-btn${res===2?' selected':''}" onclick="agr('${g}',${i},2)" style="font-size:10px;padding:4px">Draw</button>
             <button class="team-btn${res===1?' selected':''}" onclick="agr('${g}',${i},1)" style="font-size:10px;padding:4px">${f1} W</button>
