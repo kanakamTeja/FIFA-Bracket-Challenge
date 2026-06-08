@@ -12,6 +12,7 @@ const BACKEND    = 'jsonbin';
 const JSONBIN_ID  = '6a265a92da38895dfe97e649';
 const JSONBIN_KEY = '$2a$10$LyKPGnl9d6x34zWcAIOjmuXeKxmyvXt7T53xVR8ZnMFXtqupRrBjy';
 </script>
+<script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
 <!-- ═══════════════════════════════════════════════════════════ -->
 
 <style>
@@ -29,7 +30,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* HERO */
 .hero{text-align:center;padding:28px 16px 20px;border-bottom:1px solid var(--border)}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-text);font-family:var(--font-head);font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:5px 18px;border-radius:4px;margin-bottom:12px;font-weight:800}
-.cat-logo{font-family:var(--font-head);font-size:13px;font-weight:900;letter-spacing:2px;background:#1a1a1a;color:var(--accent);border:2px solid var(--accent);padding:2px 8px;border-radius:2px;margin-right:6px}
+.cat-logo{display:inline-block;width:36px;height:20px;background-image:url('https://www.peartree.com.au/wp-content/uploads/2017/05/Caterpillar.png');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:2px;margin-right:6px;vertical-align:middle}
 .hero h1{font-family:var(--font-head);font-size:clamp(34px,6vw,76px);font-weight:900;letter-spacing:-1px;line-height:.92;text-transform:uppercase;color:var(--text)}
 .hero h1 span{color:var(--accent)}
 .hero-sub{font-family:var(--font-head);font-size:clamp(12px,2vw,18px);color:var(--muted);letter-spacing:4px;text-transform:uppercase;margin-top:8px}
@@ -75,6 +76,8 @@ select option{background:#1a1a1a}
 .team-btn{flex:1;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-head);font-size:11px;font-weight:700;padding:5px 7px;cursor:pointer;transition:all .2s;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .team-btn:hover{border-color:var(--accent);color:var(--accent)}
 .team-btn.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.team-btn.draw{flex:0 0 64px;padding:5px 8px;font-size:11px;margin-left:auto}
+.team-btn.draw.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
 .vs-badge{font-family:var(--font-head);font-size:9px;color:var(--muted);min-width:18px;text-align:center}
 .match-num{font-size:9px;color:var(--muted);min-width:16px}
 .progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:7px 0}
@@ -132,6 +135,18 @@ select option{background:#1a1a1a}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--accent);color:var(--accent-text);font-family:var(--font-head);font-size:13px;font-weight:800;letter-spacing:1px;padding:11px 22px;border-radius:5px;transform:translateY(70px);opacity:0;transition:all .28s;z-index:9999;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 .site-footer{margin:24px auto 16px;max-width:1400px;padding:16px 20px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid rgba(255,255,255,.08);font-family:var(--font-body)}
+
+/* Twemoji flag sizing: keep inline with text, slightly smaller */
+img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
+  width:1em;
+  height:1em;
+  vertical-align:-0.12em;
+  display:inline-block;
+}
+/* Inline CSS flags for subdivisions (England, Scotland) as fallbacks */
+.flag{display:inline-block;width:1em;height:1em;vertical-align:-0.12em;background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:2px}
+.flag-england{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'><rect width='64' height='48' fill='%23ffffff'/><rect x='28' width='8' height='48' fill='%23d00'/><rect y='20' width='64' height='8' fill='%23d00'/></svg>")}
+.flag-scotland{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 48'><rect width='64' height='48' fill='%23006aff'/><g stroke='%23ffffff' stroke-width='8' stroke-linecap='square'><line x1='0' y1='0' x2='64' y2='48'/><line x1='64' y1='0' x2='0' y2='48'/></g></svg>")}
 .sync-bar{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:10px}
 .admin-panel{background:#111;border:1px solid var(--accent);border-radius:9px;padding:14px;margin-top:10px;display:none}
 .admin-panel.open{display:block}
@@ -147,7 +162,7 @@ select option{background:#1a1a1a}
 <body>
 <div id="app">
   <div class="hero">
-    <div class="hero-badge"><span class="cat-logo">CAT</span> Caterpillar FIFA Challenge</div>
+    <div class="hero-badge"><span class="cat-logo" role="img" aria-label="Caterpillar logo"></span> Caterpillar FIFA Challenge</div>
     <h1>2026 FIFA<br><span>World Cup</span></h1>
     <div class="hero-sub">Bracket Challenge &nbsp;·&nbsp; USA &nbsp;·&nbsp; Mexico &nbsp;·&nbsp; Canada</div>
     <div class="deadline-badge">&#9200; Closes June 11, 2026 &nbsp;·&nbsp; 12:00 PM ET</div><br>
@@ -573,9 +588,22 @@ function showToast(m) {
 function getFlag(team) {
   for (const g of Object.keys(GROUPS)) {
     const i = GROUPS[g].teams.indexOf(team);
-    if (i >= 0) return GROUPS[g].flags[i];
+    if (i >= 0) {
+      const flag = GROUPS[g].flags[i];
+      if (flag === '🏴') {
+        // Subdivision flags (not reliably supported on all platforms) — draw with CSS SVG
+        if (team === 'Scotland') return '<span class="flag flag-scotland" aria-hidden="true"></span>';
+        if (team === 'England') return '<span class="flag flag-england" aria-hidden="true"></span>';
+        return '🌍';
+      }
+      return flag;
+    }
   }
   return '🌍';
+}
+function emojiUpdate(root = document.getElementById('app')) {
+  if (typeof window === 'undefined' || !window.twemoji || !root) return;
+  try { twemoji.parse(root, { folder: 'svg', ext: '.svg' }); } catch (e) { /* ignore */ }
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function copyEl(id) {
@@ -672,6 +700,8 @@ function score(entry) {
     if (ar.topAssist?.assists !== undefined && sp.assisterAssists===ar.topAssist.assists) bonus+=25;
     if (ar.topKeeper?.player  && sp.keeper===ar.topKeeper.player)              bonus+=50;
     if (ar.topKeeper?.saves   !== undefined && sp.keeperSaves===ar.topKeeper.saves) bonus+=25;
+    // MVP / Golden Ball
+    if (ar.mvp?.player && sp.mvp===ar.mvp.player)                               bonus+=50;
   }
   return {pts, bonus, gc, r32c, r16c, r8c, r4c, fc};
 }
@@ -710,6 +740,7 @@ function renderEntry() {
         ${!closed?'<button class="btn btn-danger" onclick="resetEntry()">Reset</button>':''}
       </div>
     </div>`;
+    emojiUpdate(w);
     return;
   }
   w.innerHTML = `<div class="box">
@@ -729,6 +760,7 @@ function renderEntry() {
     </div>
   </div>
   <div id="browseBox" style="max-width:640px;margin:10px auto;display:none"></div>`;
+  emojiUpdate(w);
 }
 
 function browseEntries() {
@@ -783,18 +815,19 @@ function renderGroups() {
   const w = document.getElementById('groupsWrap');
   let html = '<div class="groups-grid">';
   Object.keys(GROUPS).forEach(g => {
-    const {teams, flags} = GROUPS[g];
+    const {teams} = GROUPS[g];
     html += `<div class="group-card">
       <div class="group-header"><div class="group-letter">Group ${g}</div><div class="group-title">${teams.join(' · ')}</div></div>`;
-    GROUP_MATCHES[g].forEach((m, i) => {
+      GROUP_MATCHES[g].forEach((m, i) => {
       const k = g+'_'+i, sel = state.groups?.[k], ar = adminResults.groups?.[k];
-      const f0 = flags[teams.indexOf(m[0])], f1 = flags[teams.indexOf(m[1])];
+      const f0 = getFlag(m[0]), f1 = getFlag(m[1]);
       html += `<div class="match-row">
         <span class="match-num" style="min-width:28px;text-align:center;line-height:1.2">#${m[2]}<br><span style="font-size:8px;color:var(--muted)">${m[3]}</span></span>
         <button class="team-btn${sel===0?' selected':''}" onclick="pickGroup('${g}',${i},0)">${f0} ${m[0]}</button>
         <span class="vs-badge">VS</span>
         <button class="team-btn${sel===1?' selected':''}" onclick="pickGroup('${g}',${i},1)">${f1} ${m[1]}</button>
-        ${ar!==undefined?`<span style="font-size:9px;color:var(--accent);margin-left:2px;font-family:var(--font-head)">${ar===0?'✓':ar===1?'✓':'D'}</span>`:''}
+        ${ar!==undefined?`<span style="font-size:9px;color:var(--accent);margin-left:8px;font-family:var(--font-head)">${ar===0?'✓':ar===1?'✓':'D'}</span>`:''}
+        <button class="team-btn draw${sel===2?" selected":""}" onclick="pickGroup('${g}',${i},2)">Draw</button>
       </div>`;
     });
     const cnt = Object.keys(state.groups||{}).filter(k=>k.startsWith(g+'_')).length;
@@ -804,6 +837,7 @@ function renderGroups() {
     </div></div>`;
   });
   html += '</div>'; w.innerHTML = html; addSaveBtn(w);
+  emojiUpdate(w);
 }
 
 function pickGroup(g, i, side) {
@@ -881,6 +915,7 @@ function renderKO() {
     html += '</div></div>';
   });
   w.innerHTML = html; addSaveBtn(w);
+  emojiUpdate(w);
 }
 
 function pickKO(round, idx, team) {
@@ -904,22 +939,27 @@ function renderSpecials() {
       players.map(p=>`<option value="${p.name}" ${val===p.name?'selected':''}>${p.flag} ${p.name} (${p.team})</option>`).join('') + '</select>';
   }
   w.innerHTML = `<div class="specials-grid">
-    <div class="special-card"><h3>⚽ Top Goal Scorer</h3>
+    <div class="special-card"><h3>⚽ Top Goal Scorer (Golden Boot)</h3>
       <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('ss',sc,sp.scorer,"pickSp('scorer',this.value)")}</div>
       <div><div class="select-label">Predicted Goals</div><input type="number" value="${sp.scorerGoals||''}" min="0" max="20" placeholder="e.g. 7" onchange="pickSpN('scorerGoals',this.value)" ${closed?'disabled':''}></div>
       ${ar.topScorer?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">⚽ Actual: ${ar.topScorer.player} (${ar.topScorer.goals||'?'} goals)</div>`:''}
     </div>
-    <div class="special-card"><h3>🎯 Top Assist Provider</h3>
+    <div class="special-card"><h3>🎯 Top Assist Provider (Assists Leader)</h3>
       <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('sa',sc,sp.assister,"pickSp('assister',this.value)")}</div>
       <div><div class="select-label">Predicted Assists</div><input type="number" value="${sp.assisterAssists||''}" min="0" max="15" placeholder="e.g. 5" onchange="pickSpN('assisterAssists',this.value)" ${closed?'disabled':''}></div>
       ${ar.topAssist?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🎯 Actual: ${ar.topAssist.player} (${ar.topAssist.assists||'?'} assists)</div>`:''}
     </div>
-    <div class="special-card"><h3>🧤 Top Saves (Keeper)</h3>
+    <div class="special-card"><h3>🧤 Top Saves (Golden Glove)</h3>
       <div style="margin-bottom:10px"><div class="select-label">Goalkeeper</div>${sel('sk',kp,sp.keeper,"pickSp('keeper',this.value)")}</div>
       <div><div class="select-label">Predicted Saves</div><input type="number" value="${sp.keeperSaves||''}" min="0" max="100" placeholder="e.g. 28" onchange="pickSpN('keeperSaves',this.value)" ${closed?'disabled':''}></div>
       ${ar.topKeeper?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🧤 Actual: ${ar.topKeeper.player} (${ar.topKeeper.saves||'?'} saves)</div>`:''}
     </div>
-  </div>`; addSaveBtn(w);
+    <div class="special-card"><h3>🏅 Golden Ball (Best Player)</h3>
+      <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('mb',sc.concat(kp),sp.mvp,"pickSp('mvp',this.value)")}</div>
+      ${ar.mvp?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🏅 Actual: ${ar.mvp.player}</div>`:''}
+    </div>
+  </div>`; addSaveBtn(w); 
+  emojiUpdate(w);
 }
 function pickSp(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=v;persist();}
 function pickSpN(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=parseInt(v)||0;persist();}
@@ -931,6 +971,7 @@ function renderLeaderboard() {
   const w = document.getElementById('lbWrap');
   if (!allEntries.length) {
     w.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted)"><div style="font-size:44px;margin-bottom:8px">🏆</div><div style="font-family:var(--font-head);font-size:20px">No entries yet — be the first!</div></div>';
+    emojiUpdate(w);
     return;
   }
   const scored = allEntries.map(e=>({...e,...score(e)})).sort((a,b)=>(b.pts+b.bonus)-(a.pts+a.bonus));
@@ -956,6 +997,7 @@ function renderLeaderboard() {
       </tr>`;
     }).join('') +
     '</tbody></table></div>';
+  emojiUpdate(w);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -972,6 +1014,7 @@ function renderShare() {
       <button class="btn btn-primary btn-sm" onclick="copyEl('urlBox')">Copy Link</button>
     </div>
   </div>`;
+  emojiUpdate(document.getElementById('shareWrap'));
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -988,16 +1031,16 @@ function renderAdmin() {
       <div class="admin-section-title">Group Stage Results</div>
       <div class="groups-grid">` +
     Object.keys(GROUPS).map(g => {
-      const {teams,flags} = GROUPS[g];
+      const {teams} = GROUPS[g];
       return `<div class="group-card"><div class="group-header"><div class="group-letter">Group ${g}</div></div>` +
         GROUP_MATCHES[g].map((m,i)=>{
           const k=g+'_'+i, res=adminResults.groups?.[k];
-          const f0=flags[teams.indexOf(m[0])],f1=flags[teams.indexOf(m[1])];
+          const f0=getFlag(m[0]),f1=getFlag(m[1]);
           return `<div class="match-row" style="flex-wrap:wrap;gap:4px">
             <span class="match-num" style="width:100%;font-size:9px;color:var(--muted)">Match #${m[2]} · ${m[3]}: ${m[0]} v ${m[1]}</span>
             <button class="team-btn${res===0?' selected':''}" onclick="agr('${g}',${i},0)" style="font-size:10px;padding:4px">${f0} W</button>
-            <button class="team-btn${res===2?' selected':''}" onclick="agr('${g}',${i},2)" style="font-size:10px;padding:4px">Draw</button>
             <button class="team-btn${res===1?' selected':''}" onclick="agr('${g}',${i},1)" style="font-size:10px;padding:4px">${f1} W</button>
+            <button class="team-btn${res===2?' selected':''}" onclick="agr('${g}',${i},2)" style="font-size:10px;padding:4px">Draw</button>
           </div>`;
         }).join('') + '</div>';
     }).join('') +
@@ -1033,9 +1076,14 @@ function renderAdmin() {
           <div class="field-label">Saves</div>
           <input type="number" value="${adminResults.topKeeper?.saves||''}" onchange="asp('topKeeper','saves',+this.value)" min="0">
         </div>
+        <div>
+          <div class="field-label">Golden Ball (MVP)</div>
+          <input type="text" value="${adminResults.mvp?.player||''}" onchange="asp('mvp','player',this.value)" placeholder="Player name" style="margin-bottom:5px">
+        </div>
       </div>
       <button class="btn btn-primary" onclick="persistAdmin()">&#128190; Save All Results</button>
     </div>`;
+  emojiUpdate(w);
 }
 
 function toggleAdmin() {
