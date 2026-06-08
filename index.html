@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caterpillar FIFA 2026 Bracket Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<script>
+
+const BACKEND    = 'jsonbin';
+const JSONBIN_ID  = '6a265a92da38895dfe97e649';
+const JSONBIN_KEY = '$2a$10$LyKPGnl9d6x34zWcAIOjmuXeKxmyvXt7T53xVR8ZnMFXtqupRrBjy';
+</script>
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a1a;--surface:#222;--card:#2a2a2a;--border:#3a3a3a;
+  --accent:#FFCD11;--accent-text:#1a1a1a;
+  --text:#f0f0f0;--muted:#888;--danger:#ff4d6d;
+  --r:8px;--font-head:'Barlow Condensed',sans-serif;--font-body:'Barlow',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(255,205,17,.07),transparent);pointer-events:none;z-index:0}
+#app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:16px}
+
+/* HERO */
+.hero{text-align:center;padding:28px 16px 20px;border-bottom:1px solid var(--border)}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-text);font-family:var(--font-head);font-size:12px;letter-spacing:3px;text-transform:uppercase;padding:5px 18px;border-radius:4px;margin-bottom:12px;font-weight:800}
+.cat-logo{font-family:var(--font-head);font-size:13px;font-weight:900;letter-spacing:2px;background:#1a1a1a;color:var(--accent);border:2px solid var(--accent);padding:2px 8px;border-radius:2px;margin-right:6px}
+.hero h1{font-family:var(--font-head);font-size:clamp(34px,6vw,76px);font-weight:900;letter-spacing:-1px;line-height:.92;text-transform:uppercase;color:var(--text)}
+.hero h1 span{color:var(--accent)}
+.hero-sub{font-family:var(--font-head);font-size:clamp(12px,2vw,18px);color:var(--muted);letter-spacing:4px;text-transform:uppercase;margin-top:8px}
+.deadline-badge{display:inline-flex;align-items:center;gap:6px;background:#2a1a00;border:1px solid var(--accent);color:var(--accent);font-size:12px;padding:4px 14px;border-radius:4px;margin-top:10px;font-family:var(--font-head);letter-spacing:1px}
+.backend-pill{display:inline-flex;align-items:center;gap:5px;background:#1e1e1e;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 10px;border-radius:20px;margin-top:8px;font-family:var(--font-head);letter-spacing:1px}
+.backend-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.backend-pill.connected .dot{background:var(--accent)}
+.backend-pill.connected{color:var(--accent);border-color:rgba(255,205,17,.3)}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:4px;margin:14px 0;overflow-x:auto}
+.tab{flex:1;min-width:72px;padding:7px 10px;background:transparent;border:none;color:var(--muted);font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:6px;transition:all .2s;white-space:nowrap}
+.tab.active{background:var(--accent);color:var(--accent-text)}
+.tab:hover:not(.active){color:var(--text)}
+.panel{display:none}.panel.active{display:block}
+
+/* FORMS */
+.box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;max-width:640px;margin:0 auto}
+.field-label{font-family:var(--font-head);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+input[type=text],input[type=number],select{width:100%;background:#111;border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font-body);font-size:14px;padding:9px 12px;outline:none;transition:border .2s}
+input:focus,select:focus{border-color:var(--accent)}
+select option{background:#1a1a1a}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 24px;border:none;border-radius:var(--r);font-family:var(--font-head);font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:var(--accent-text)}
+.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:transparent;border:1px solid var(--danger);color:var(--danger);font-size:12px;padding:5px 12px}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* GROUPS */
+.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(308px,1fr));gap:14px;margin-top:14px}
+.group-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.group-header{background:linear-gradient(90deg,#2a2700,#1e1e1e);border-left:4px solid var(--accent);padding:9px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.group-letter{font-family:var(--font-head);font-size:20px;font-weight:900;color:var(--accent)}
+.group-title{font-family:var(--font-head);font-size:11px;letter-spacing:.3px;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match-row{padding:8px 13px;border-bottom:1px solid #2e2e2e;display:flex;align-items:center;gap:6px}
+.match-row:last-of-type{border-bottom:none}
+.team-btn{flex:1;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-head);font-size:11px;font-weight:700;padding:5px 7px;cursor:pointer;transition:all .2s;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-btn:hover{border-color:var(--accent);color:var(--accent)}
+.team-btn.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.vs-badge{font-family:var(--font-head);font-size:9px;color:var(--muted);min-width:18px;text-align:center}
+.match-num{font-size:9px;color:var(--muted);min-width:16px}
+.progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:7px 0}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
+
+/* KNOCKOUT */
+.bracket-stage{margin-bottom:24px}
+.stage-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.stage-title{font-family:var(--font-head);font-size:19px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+.stage-pts{font-size:11px;color:var(--accent-text);background:var(--accent);border-radius:4px;padding:2px 9px;font-family:var(--font-head);letter-spacing:1px;font-weight:800}
+.knockout-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:9px}
+.ko-match{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px;display:flex;flex-direction:column;gap:6px}
+.ko-match-label{font-size:9px;color:var(--muted);font-family:var(--font-head);letter-spacing:1px}
+.ko-team{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--border);border-radius:5px;cursor:pointer;transition:all .2s}
+.ko-team:hover:not(.tbd){border-color:var(--accent)}
+.ko-team.selected{background:rgba(255,205,17,.11);border-color:var(--accent)}
+.ko-team.tbd{cursor:default;opacity:.38}
+.ko-team-name{font-family:var(--font-head);font-size:13px;font-weight:700;flex:1}
+
+/* LEADERBOARD */
+.lb-wrap{margin-top:14px;overflow-x:auto}
+.lb-table{width:100%;border-collapse:collapse;min-width:500px}
+.lb-table thead tr{background:var(--accent)}
+.lb-table thead th{font-family:var(--font-head);font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent-text);padding:9px 14px;text-align:center}
+.lb-table thead th:nth-child(2){text-align:left}
+.lb-table tbody tr{background:var(--card);border-bottom:1px solid var(--border);transition:background .15s}
+.lb-table tbody tr:hover{background:#333}
+.lb-table tbody tr.me{background:rgba(255,205,17,.08);border-left:3px solid var(--accent)}
+.lb-table tbody td{padding:10px 14px;text-align:center;font-family:var(--font-head);font-size:15px}
+.lb-table tbody td:nth-child(2){text-align:left;font-size:16px;font-weight:700}
+.lb-rank{font-size:17px;font-weight:800;color:var(--muted)}
+.lb-rank.r1{color:var(--accent)}
+.lb-rank.r2{color:#c0c0c0}
+.lb-rank.r3{color:#cd7f32}
+.lb-pts{color:var(--accent);font-weight:800;font-size:17px}
+.lb-sub{color:var(--muted);font-size:13px}
+.lb-bonus{color:var(--accent);font-weight:700}
+
+/* SPECIALS */
+.specials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-top:14px}
+.special-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:18px}
+.special-card h3{font-family:var(--font-head);font-size:17px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.select-label{font-size:10px;color:var(--muted);font-family:var(--font-head);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+
+/* SHARE */
+.share-card{background:var(--card);border:1px solid var(--accent);border-radius:11px;padding:18px;margin-bottom:14px}
+.share-card h3{font-family:var(--font-head);font-size:17px;font-weight:800;color:var(--accent);margin-bottom:8px;letter-spacing:1px;text-transform:uppercase}
+.code-box{background:#111;border:1px solid var(--border);border-radius:5px;padding:11px;font-family:monospace;font-size:11px;color:#ccc;white-space:pre-wrap;word-break:break-all;line-height:1.6;max-height:140px;overflow-y:auto;margin:8px 0}
+
+/* MISC */
+.note{background:rgba(255,205,17,.07);border:1px solid rgba(255,205,17,.25);border-radius:7px;padding:9px 13px;font-size:13px;color:#c9a000;margin-bottom:14px}
+.err-note{background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.3);border-radius:7px;padding:9px 13px;font-size:13px;color:var(--danger);margin-bottom:14px}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--accent);color:var(--accent-text);font-family:var(--font-head);font-size:13px;font-weight:800;letter-spacing:1px;padding:11px 22px;border-radius:5px;transform:translateY(70px);opacity:0;transition:all .28s;z-index:9999;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.site-footer{margin:24px auto 16px;max-width:1400px;padding:16px 20px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid rgba(255,255,255,.08);font-family:var(--font-body)}
+.sync-bar{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:10px}
+.admin-panel{background:#111;border:1px solid var(--accent);border-radius:9px;padding:14px;margin-top:10px;display:none}
+.admin-panel.open{display:block}
+.admin-section-title{font-family:var(--font-head);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin:14px 0 7px}
+@media(max-width:580px){
+  .field-row{grid-template-columns:1fr}
+  .knockout-grid{grid-template-columns:1fr}
+  .lb-table thead th:nth-child(4),.lb-table thead th:nth-child(5),
+  .lb-table tbody td:nth-child(4),.lb-table tbody td:nth-child(5){display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hero">
+    <div class="hero-badge"><span class="cat-logo">CAT</span> Caterpillar FIFA Challenge</div>
+    <h1>2026 FIFA<br><span>World Cup</span></h1>
+    <div class="hero-sub">Bracket Challenge &nbsp;·&nbsp; USA &nbsp;·&nbsp; Mexico &nbsp;·&nbsp; Canada</div>
+    <div class="deadline-badge">&#9200; Closes June 11, 2026 &nbsp;·&nbsp; 12:00 PM ET</div><br>
+    <div class="backend-pill" id="backendPill"><span class="dot"></span> <span id="backendLabel">connecting…</span></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('entry')">My Picks</button>
+    <button class="tab" onclick="switchTab('groups')">Groups</button>
+    <button class="tab" onclick="switchTab('knockout')">Knockout</button>
+    <button class="tab" onclick="switchTab('specials')">Specials</button>
+    <button class="tab" onclick="switchTab('leaderboard')">Leaderboard</button>
+    <button class="tab" onclick="switchTab('share')">Share</button>
+    <button class="tab" onclick="switchTab('admin')">&#9881; Admin</button>
+  </div>
+
+  <div id="panel-entry"      class="panel active"><div id="entryWrap"></div></div>
+  <div id="panel-groups"     class="panel"><div class="note">Pick the winner of each match. All 6 matches per group must be filled before the bracket unlocks.</div><div id="groupsWrap"></div></div>
+  <div id="panel-knockout"   class="panel"><div id="koWrap"></div></div>
+  <div id="panel-specials"   class="panel"><div id="spWrap"></div></div>
+  <div id="panel-leaderboard"class="panel"><div id="lbWrap"></div></div>
+  <div id="panel-share"      class="panel"><div id="shareWrap"></div></div>
+  <div id="panel-admin"      class="panel"><div id="adminWrap"></div></div>
+</div>
+<footer class="site-footer">if you encountered bugs, please message me! (Teja M)</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// BACKEND ABSTRACTION LAYER
+// All reads/writes go through DB.get() / DB.set() / DB.list()
+// Swap the implementation below when you pick your backend.
+// ═══════════════════════════════════════════════════════════════
+const DB = (() => {
+  // ── LOCAL (demo, no setup) ───────────────────────────────────
+  if (typeof BACKEND === 'undefined' || BACKEND === 'local') {
+    const store = {};
+    return {
+      name: 'Local (demo)',
+      async init() { return true; },
+      async get(key) { return store[key] ?? localStorage.getItem('cfr_' + key) ? JSON.parse(localStorage.getItem('cfr_' + key)) : null; },
+      async set(key, val) { store[key] = val; localStorage.setItem('cfr_' + key, JSON.stringify(val)); },
+      async list(prefix) {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('cfr_' + prefix)).map(k => k.slice(4));
+        return keys;
+      },
+    };
+  }
+
+  // ── FIREBASE ─────────────────────────────────────────────────
+  if (BACKEND === 'firebase') {
+    const FIREBASE_CDN = 'https://www.gstatic.com/firebasejs/10.12.2/';
+    let db;
+    return {
+      name: 'Firebase',
+      async init() {
+        const { initializeApp } = await import(FIREBASE_CDN + 'firebase-app.js');
+        const { getFirestore, doc, getDoc, setDoc, collection, getDocs } = await import(FIREBASE_CDN + 'firebase-firestore.js');
+        const app = initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+        this._fs = { doc, getDoc, setDoc, collection, getDocs };
+        return true;
+      },
+      async get(key) {
+        const snap = await this._fs.getDoc(this._fs.doc(db, 'cfr', key));
+        return snap.exists() ? snap.data().value : null;
+      },
+      async set(key, val) {
+        await this._fs.setDoc(this._fs.doc(db, 'cfr', key), { value: val, ts: Date.now() });
+      },
+      async list(prefix) {
+        const snap = await this._fs.getDocs(this._fs.collection(db, 'cfr'));
+        return snap.docs.filter(d => d.id.startsWith(prefix)).map(d => d.id);
+      },
+    };
+  }
+
+  // ── SUPABASE ─────────────────────────────────────────────────
+  if (BACKEND === 'supabase') {
+    let client;
+    return {
+      name: 'Supabase',
+      async init() {
+        const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+        client = mod.createClient(SUPABASE_URL, SUPABASE_KEY);
+        return true;
+      },
+      async get(key) {
+        const { data } = await client.from('cfr_store').select('value').eq('key', key).single();
+        return data ? data.value : null;
+      },
+      async set(key, val) {
+        await client.from('cfr_store').upsert({ key, value: val, updated_at: new Date().toISOString() });
+      },
+      async list(prefix) {
+        const { data } = await client.from('cfr_store').select('key').like('key', prefix + '%');
+        return (data || []).map(r => r.key);
+      },
+    };
+  }
+
+  // ── JSONBIN ──────────────────────────────────────────────────
+  if (BACKEND === 'jsonbin') {
+    // JSONBin stores a single JSON object. We treat it as a flat key-value map.
+    const API = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
+    const HDR = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY, 'X-Bin-Versioning': 'false' };
+    let cache = null;
+    async function load() {
+      if (cache) return cache;
+      const r = await fetch(API + '/latest', { headers: HDR });
+      const j = await r.json();
+      cache = j.record || {};
+      return cache;
+    }
+    async function flush() {
+      await fetch(API, { method: 'PUT', headers: HDR, body: JSON.stringify(cache) });
+    }
+    return {
+      name: 'JSONBin',
+      async init() { await load(); return true; },
+      async get(key) { const d = await load(); return d[key] ?? null; },
+      async set(key, val) { const d = await load(); d[key] = val; cache = d; await flush(); },
+      async list(prefix) { const d = await load(); return Object.keys(d).filter(k => k.startsWith(prefix)); },
+    };
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const DEADLINE = new Date('2026-06-11T16:00:00Z');
+const GROUPS = {
+  A:{teams:['Mexico','Poland','Saudi Arabia','Argentina'],          flags:['🇲🇽','🇵🇱','🇸🇦','🇦🇷']},
+  B:{teams:['USA','Wales','England','Iran'],                        flags:['🇺🇸','🏴󠁧󠁢󠁷󠁬󠁳󠁿','🏴󠁧󠁢󠁥󠁮󠁧󠁿','🇮🇷']},
+  C:{teams:['France','Australia','Denmark','Tunisia'],              flags:['🇫🇷','🇦🇺','🇩🇰','🇹🇳']},
+  D:{teams:['Brazil','Serbia','Switzerland','Cameroon'],            flags:['🇧🇷','🇷🇸','🇨🇭','🇨🇲']},
+  E:{teams:['Spain','Germany','Japan','Costa Rica'],                flags:['🇪🇸','🇩🇪','🇯🇵','🇨🇷']},
+  F:{teams:['Morocco','Croatia','Belgium','Canada'],                flags:['🇲🇦','🇭🇷','🇧🇪','🇨🇦']},
+  G:{teams:['Portugal','Uruguay','South Korea','Ghana'],            flags:['🇵🇹','🇺🇾','🇰🇷','🇬🇭']},
+  H:{teams:['Netherlands','Senegal','Ecuador','Qatar'],             flags:['🇳🇱','🇸🇳','🇪🇨','🇶🇦']},
+  I:{teams:['Colombia','Panama','Peru','Chile'],                    flags:['🇨🇴','🇵🇦','🇵🇪','🇨🇱']},
+  J:{teams:['Italy','Paraguay','Turkey','New Zealand'],             flags:['🇮🇹','🇵🇾','🇹🇷','🇳🇿']},
+  K:{teams:['Nigeria','Bolivia','Venezuela','Algeria'],             flags:['🇳🇬','🇧🇴','🇻🇪','🇩🇿']},
+  L:{teams:['Egypt','South Africa','IR Iran 2','Qatar 2'],         flags:['🇪🇬','🇿🇦','🇮🇷','🇶🇦']},
+};
+const GROUP_MATCHES = {};
+Object.keys(GROUPS).forEach(g => {
+  const t = GROUPS[g].teams;
+  GROUP_MATCHES[g] = [[t[0],t[1]],[t[2],t[3]],[t[0],t[2]],[t[1],t[3]],[t[0],t[3]],[t[1],t[2]]];
+});
+const TOP_SCORERS = {
+  'Argentina':['L. Messi','J. Álvarez'],'Brazil':['Vinicius Jr','Rodrygo'],
+  'France':['K. Mbappé','O. Giroud'],'England':['H. Kane','M. Rashford'],
+  'Portugal':['C. Ronaldo','B. Fernandes'],'Spain':['Morata','Ferran Torres'],
+  'Germany':['T. Müller','K. Havertz'],'Netherlands':['M. Depay','B. Weghorst'],
+  'Uruguay':['L. Suárez','D. Núñez'],'Belgium':['R. Lukaku','L. Trossard'],
+  'Mexico':['H. Lozano','R. Jiménez'],'USA':['C. Pulisic','F. Aaronson'],
+  'Croatia':['I. Perišić','A. Kramarić'],'Morocco':['Y. En-Nesyri','A. Ounahi'],
+  'Denmark':['C. Eriksen','R. Højlund'],'Japan':['D. Ito','T. Asano'],
+  'Switzerland':['X. Shaqiri','B. Embolo'],'South Korea':['Son Heung-min','H. Hwang'],
+  'Senegal':['S. Mané','I. Sarr'],'Colombia':['L. Díaz','J. Cuadrado'],
+  'Ecuador':['E. Valencia','M. Caicedo'],'Australia':['M. Leckie','M. Duke'],
+  'Poland':['R. Lewandowski','P. Zielinski'],'Serbia':['A. Mitrović','D. Vlahović'],
+  'Nigeria':['V. Osimhen','S. Chukwueze'],'Italy':['G. Immobile','L. Pellegrini'],
+  'Peru':['G. Lapadula','A. Carrillo'],'Chile':['A. Vidal','B. Díaz'],
+};
+const TOP_KEEPERS = {
+  'Argentina':['E. Martínez','G. Rulli'],'Brazil':['Alisson','Ederson'],
+  'France':['M. Maignan','A. Areola'],'England':['J. Pickford','A. Ramsdale'],
+  'Portugal':['R. Patrício','D. Costa'],'Spain':['U. Simón','R. Sánchez'],
+  'Germany':['M. Neuer','M. ter Stegen'],'Netherlands':['B. Flekken','J. Bijlow'],
+  'Belgium':['T. Courtois','K. Casteels'],'Mexico':['G. Ochoa','A. Talavera'],
+  'Denmark':['K. Schmeichel','O. Nyland'],'Switzerland':['Y. Sommer','G. Mvogo'],
+  'USA':['M. Turner','E. Horvath'],'Morocco':['Y. Bounou','A. Tagnaouti'],
+  'Croatia':['D. Livaković','I. Grbić'],'Senegal':['E. Mendy','S. Gomis'],
+};
+function allPlayers(type) {
+  const src = type==='keeper' ? TOP_KEEPERS : TOP_SCORERS;
+  return Object.entries(src).flatMap(([team, players]) => {
+    const gKey = Object.keys(GROUPS).find(g => GROUPS[g].teams.includes(team));
+    const idx = gKey ? GROUPS[gKey].teams.indexOf(team) : -1;
+    const flag = gKey && idx>=0 ? GROUPS[gKey].flags[idx] : '🌍';
+    return players.map(name => ({name, team, flag}));
+  }).sort((a,b) => a.name.localeCompare(b.name));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════════════
+let state = {};
+let allEntries = [];
+let adminResults = {};
+let currentKey = null;
+let adminMode = false;
+let backendReady = false;
+let syncTimer = null;
+
+// ═══════════════════════════════════════════════════════════════
+// BACKEND HELPERS
+// ═══════════════════════════════════════════════════════════════
+async function dbInit() {
+  try {
+    await DB.init();
+    backendReady = true;
+    const pill = document.getElementById('backendPill');
+    pill.classList.add('connected');
+    document.getElementById('backendLabel').textContent =  'connected';
+  } catch(e) {
+    document.getElementById('backendLabel').textContent = 'offline (local only)';
+    console.warn('Backend init failed:', e);
+  }
+}
+
+async function loadAll() {
+  try {
+    adminResults = await DB.get('adminResults') || {};
+    const keys = await DB.list('entry:');
+    const entries = await Promise.all(keys.map(k => DB.get(k)));
+    allEntries = entries.filter(Boolean);
+    const saved = sessionStorage.getItem('cfr_key');
+    if (saved) {
+      currentKey = saved;
+      const mine = allEntries.find(e => e.key === saved);
+      if (mine) state = JSON.parse(JSON.stringify(mine));
+    }
+  } catch(e) { console.warn('loadAll error', e); }
+}
+
+async function persist() {
+  if (!state.name) return;
+  state.savedAt = Date.now();
+  try {
+    await DB.set('entry:' + state.key, state);
+    const idx = allEntries.findIndex(e => e.key === state.key);
+    if (idx >= 0) allEntries[idx] = JSON.parse(JSON.stringify(state));
+    else allEntries.push(JSON.parse(JSON.stringify(state)));
+    showToast('Saved ✓');
+  } catch(e) { showToast('Save failed — check connection'); }
+}
+
+async function persistAdmin() {
+  try { await DB.set('adminResults', adminResults); showToast('Results updated ✓'); }
+  catch(e) { showToast('Save failed'); }
+}
+
+// Auto-refresh leaderboard every 20s
+function startAutoRefresh() {
+  clearInterval(syncTimer);
+  syncTimer = setInterval(async () => {
+    await loadAll();
+    const active = document.querySelector('.tab.active');
+    if (active?.textContent.includes('Leaderboard')) renderLeaderboard();
+  }, 20000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════
+function isClosed() { return new Date() >= DEADLINE; }
+function showToast(m) {
+  const t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+function getFlag(team) {
+  for (const g of Object.keys(GROUPS)) {
+    const i = GROUPS[g].teams.indexOf(team);
+    if (i >= 0) return GROUPS[g].flags[i];
+  }
+  return '🌍';
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function copyEl(id) {
+  const txt = document.getElementById(id).innerText.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+  navigator.clipboard.writeText(txt).then(() => showToast('Copied ✓')).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = txt;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); showToast('Copied ✓');
+  });
+}
+function addSaveBtn(wrap) {
+  if (!currentKey) return;
+  const d = document.createElement('div');
+  d.style.cssText = 'text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)';
+  d.innerHTML = '<button class="btn btn-primary" onclick="persist()">&#128190; Save Picks</button>';
+  wrap.appendChild(d);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCORING
+// ═══════════════════════════════════════════════════════════════
+function standings() {
+  const st = {};
+  Object.keys(GROUPS).forEach(g => {
+    GROUPS[g].teams.forEach(t => { st[t] = {pts:0}; });
+    const res = adminResults.groups || {};
+    GROUP_MATCHES[g].forEach((m, i) => {
+      const v = res[g+'_'+i];
+      if (v === 0) st[m[0]].pts += 3;
+      else if (v === 1) st[m[1]].pts += 3;
+      else if (v === 2) { st[m[0]].pts++; st[m[1]].pts++; }
+    });
+  });
+  return st;
+}
+// advancers() — uses ADMIN results, for scoring only
+function advancers(g) {
+  const st = standings();
+  return [...GROUPS[g].teams].sort((a,b) => (st[b]?.pts||0)-(st[a]?.pts||0)).slice(0,2);
+}
+
+// userAdvancers() — uses the USER'S OWN group picks to populate the bracket.
+// A team only appears in R32 if the user has actually picked it to win/draw
+// enough matches to clearly be in 1st or 2nd. If the user hasn't finished
+// picking a group yet, both slots for that group stay 'TBD'.
+function userAdvancers(g) {
+  const teams = GROUPS[g].teams;
+  const pts = {};
+  teams.forEach(t => { pts[t] = 0; });
+
+  const picks = state.groups || {};
+  const matches = GROUP_MATCHES[g];
+
+  // Only count matches the user has actually picked
+  let pickedCount = 0;
+  matches.forEach((m, i) => {
+    const k = g + '_' + i;
+    const v = picks[k];
+    if (v === 0)      { pts[m[0]] += 3; pickedCount++; }
+    else if (v === 1) { pts[m[1]] += 3; pickedCount++; }
+    // draws not offered in UI for group picks, but handle gracefully
+    else if (v === 2) { pts[m[0]]++; pts[m[1]]++; pickedCount++; }
+  });
+
+  // If the user hasn't picked all 6 matches in this group, return TBD for both slots
+  if (pickedCount < matches.length) return ['TBD', 'TBD'];
+
+  const sorted = [...teams].sort((a, b) => pts[b] - pts[a]);
+  return [sorted[0], sorted[1]];
+}
+function score(entry) {
+  let pts = 0, gc = 0, r32c = 0, r16c = 0, r8c = 0, r4c = 0, fc = 0;
+  const gRes = adminResults.groups || {};
+  Object.keys(GROUPS).forEach(g => {
+    GROUP_MATCHES[g].forEach((_, i) => {
+      const k = g+'_'+i;
+      if (gRes[k] !== undefined && entry.groups?.[k] !== undefined && gRes[k] === entry.groups[k]) { pts+=30; gc++; }
+    });
+  });
+  [['r32',50],['r16',70],['r8',80],['r4',90],['final',100]].forEach(([r,p], ri) => {
+    const res = adminResults[r] || {}, picks = entry[r] || {};
+    Object.keys(res).forEach(k => {
+      if (picks[k] !== undefined && res[k] === picks[k]) {
+        pts+=p;
+        if(ri===0)r32c++;else if(ri===1)r16c++;else if(ri===2)r8c++;else if(ri===3)r4c++;else fc++;
+      }
+    });
+  });
+  let bonus = 0;
+  if (entry.specials) {
+    const sp = entry.specials, ar = adminResults;
+    if (ar.topScorer?.player  && sp.scorer===ar.topScorer.player)              bonus+=50;
+    if (ar.topScorer?.goals   !== undefined && sp.scorerGoals===ar.topScorer.goals) bonus+=25;
+    if (ar.topAssist?.player  && sp.assister===ar.topAssist.player)            bonus+=50;
+    if (ar.topAssist?.assists !== undefined && sp.assisterAssists===ar.topAssist.assists) bonus+=25;
+    if (ar.topKeeper?.player  && sp.keeper===ar.topKeeper.player)              bonus+=50;
+    if (ar.topKeeper?.saves   !== undefined && sp.keeperSaves===ar.topKeeper.saves) bonus+=25;
+  }
+  return {pts, bonus, gc, r32c, r16c, r8c, r4c, fc};
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ROUTING
+// ═══════════════════════════════════════════════════════════════
+function switchTab(name) {
+  const names = ['entry','groups','knockout','specials','leaderboard','share','admin'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  ({entry:renderEntry, groups:renderGroups, knockout:renderKO, specials:renderSpecials,
+    leaderboard:renderLeaderboard, share:renderShare, admin:renderAdmin})[name]?.();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENTRY FORM
+// ═══════════════════════════════════════════════════════════════
+function renderEntry() {
+  const w = document.getElementById('entryWrap');
+  const closed = isClosed();
+  if (currentKey && state.name) {
+    const ini = state.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+    w.innerHTML = `<div class="box">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+        <div style="width:50px;height:50px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:20px;font-weight:900;color:var(--accent-text)">${ini}</div>
+        <div><div style="font-family:var(--font-head);font-size:22px;font-weight:800">${state.name}</div><div style="font-size:12px;color:var(--muted)">Entry live · auto-saves on every pick</div></div>
+      </div>
+      <div class="note">Your picks are stored in the shared backend and visible to everyone on the Leaderboard tab.</div>
+      ${closed?'<div class="err-note">&#9200; Challenge is now closed — no further edits.</div>':''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="switchTab('groups')">Edit Group Picks →</button>
+        <button class="btn btn-secondary" onclick="switchTab('leaderboard')">Leaderboard</button>
+        <button class="btn btn-secondary" onclick="switchTab('share')">Share / Embed</button>
+        ${!closed?'<button class="btn btn-danger" onclick="resetEntry()">Reset</button>':''}
+      </div>
+    </div>`;
+    return;
+  }
+  w.innerHTML = `<div class="box">
+    <div style="margin-bottom:18px">
+      <div style="font-family:var(--font-head);font-size:26px;font-weight:900;margin-bottom:4px">Enter the Challenge</div>
+      <div style="font-size:13px;color:var(--muted)">No login needed. Your picks save to a shared backend visible to all participants.</div>
+    </div>
+    ${closed?'<div class="err-note">&#9200; Submissions are closed.</div>':''}
+    <div class="field-row">
+      <div><div class="field-label">First Name</div><input type="text" id="fn" placeholder="e.g. Teja" maxlength="20" ${closed?'disabled':''}></div>
+      <div><div class="field-label">Last Initial</div><input type="text" id="ln" placeholder="e.g. K" maxlength="3" ${closed?'disabled':''}></div>
+    </div>
+    ${!closed?'<button class="btn btn-primary" onclick="startEntry()" style="width:100%;justify-content:center">Start My Bracket →</button>':''}
+    <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">
+      ${allEntries.length} participant(s) so far &nbsp;·&nbsp;
+      <button class="btn btn-secondary btn-sm" style="margin-top:5px" onclick="browseEntries()">Browse entries</button>
+    </div>
+  </div>
+  <div id="browseBox" style="max-width:640px;margin:10px auto;display:none"></div>`;
+}
+
+function browseEntries() {
+  const box = document.getElementById('browseBox');
+  if (box.style.display === 'none') {
+    box.style.display = 'block';
+    box.innerHTML = allEntries.length === 0
+      ? '<div class="note">No entries yet — be the first!</div>'
+      : allEntries.map(e => {
+          const ini = e.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+          return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="viewEntry('${e.key}')">
+            <div style="width:30px;height:30px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:11px;font-weight:900;color:var(--accent-text)">${ini}</div>
+            <div style="font-family:var(--font-head);font-size:14px">${e.name}</div>
+            <div style="margin-left:auto;font-size:10px;color:var(--muted)">${new Date(e.savedAt||0).toLocaleDateString()}</div>
+          </div>`;
+        }).join('');
+  } else { box.style.display = 'none'; }
+}
+
+function viewEntry(key) {
+  const e = allEntries.find(x => x.key === key);
+  if (!e) return;
+  currentKey = key; state = JSON.parse(JSON.stringify(e));
+  sessionStorage.setItem('cfr_key', key);
+  renderEntry(); showToast("Viewing " + e.name + "'s picks");
+}
+
+function resetEntry() {
+  if (!confirm('Reset your entry? This is permanent.')) return;
+  DB.set('entry:'+currentKey, null).catch(()=>{});
+  allEntries = allEntries.filter(e => e.key !== currentKey);
+  currentKey = null; state = {}; sessionStorage.removeItem('cfr_key');
+  renderEntry();
+}
+
+function startEntry() {
+  const fn = document.getElementById('fn').value.trim();
+  const ln = document.getElementById('ln').value.trim();
+  if (!fn || !ln) { showToast('Enter your name first'); return; }
+  const name = fn + ' ' + ln.toUpperCase().replace(/[^A-Z]/g,'').slice(0,1) + '.';
+  const key = 'p_' + (fn+ln).toLowerCase().replace(/\s/g,'') + '_' + Date.now().toString(36);
+  currentKey = key; sessionStorage.setItem('cfr_key', key);
+  state = {name, key, groups:{}, r32:{}, r16:{}, r8:{}, r4:{}, final:{}, specials:{}};
+  persist(); renderEntry(); switchTab('groups');
+  showToast('Welcome, ' + fn + '! Pick your groups →');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GROUPS
+// ═══════════════════════════════════════════════════════════════
+function renderGroups() {
+  const w = document.getElementById('groupsWrap');
+  let html = '<div class="groups-grid">';
+  Object.keys(GROUPS).forEach(g => {
+    const {teams, flags} = GROUPS[g];
+    html += `<div class="group-card">
+      <div class="group-header"><div class="group-letter">Group ${g}</div><div class="group-title">${teams.join(' · ')}</div></div>`;
+    GROUP_MATCHES[g].forEach((m, i) => {
+      const k = g+'_'+i, sel = state.groups?.[k], ar = adminResults.groups?.[k];
+      const f0 = flags[teams.indexOf(m[0])], f1 = flags[teams.indexOf(m[1])];
+      html += `<div class="match-row">
+        <span class="match-num">M${i+1}</span>
+        <button class="team-btn${sel===0?' selected':''}" onclick="pickGroup('${g}',${i},0)">${f0} ${m[0]}</button>
+        <span class="vs-badge">VS</span>
+        <button class="team-btn${sel===1?' selected':''}" onclick="pickGroup('${g}',${i},1)">${f1} ${m[1]}</button>
+        ${ar!==undefined?`<span style="font-size:9px;color:var(--accent);margin-left:2px;font-family:var(--font-head)">${ar===0?'✓':ar===1?'✓':'D'}</span>`:''}
+      </div>`;
+    });
+    const cnt = Object.keys(state.groups||{}).filter(k=>k.startsWith(g+'_')).length;
+    html += `<div style="padding:7px 13px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px">
+      <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${Math.round(cnt/6*100)}%"></div></div>
+      <span style="font-size:10px;color:var(--muted)">${cnt}/6</span>
+    </div></div>`;
+  });
+  html += '</div>'; w.innerHTML = html; addSaveBtn(w);
+}
+
+function pickGroup(g, i, side) {
+  if (isClosed()&&!adminMode) return showToast('Challenge is closed');
+  if (!currentKey) return showToast('Enter your name first');
+  if (!state.groups) state.groups = {};
+  state.groups[g+'_'+i] = side;
+  persist(); renderGroups();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KNOCKOUT
+// ═══════════════════════════════════════════════════════════════
+function r32Matches() {
+  const pairs = [['A','B'],['C','D'],['E','F'],['G','H'],['I','J'],['K','L']];
+  const m = [];
+  pairs.forEach(([g1,g2]) => {
+    const a1 = userAdvancers(g1);
+    const a2 = userAdvancers(g2);
+    // 1st of group g1 vs 2nd of group g2, and vice versa
+    // If either side is TBD (group not fully picked), the slot stays TBD
+    m.push([a1[0], a2[1]]);
+    m.push([a2[0], a1[1]]);
+  });
+  // 4 wild-card slots — always TBD until admin sets them
+  m.push(['TBD','TBD'],['TBD','TBD'],['TBD','TBD'],['TBD','TBD']);
+  return m.slice(0, 16);
+}
+function roundMatches(round) {
+  const prev = {r16:'r32',r8:'r16',r4:'r8',final:'r4'}[round];
+  if (!prev) return [['TBD','TBD']];
+  const pm = round==='r16' ? r32Matches() : roundMatches(prev);
+  const m = [];
+  for (let i=0; i<pm.length; i+=2) {
+    m.push([
+      state[prev]?.[prev+'_'+i] || adminResults[prev]?.[prev+'_'+i] || 'TBD',
+      state[prev]?.[prev+'_'+(i+1)] || adminResults[prev]?.[prev+'_'+(i+1)] || 'TBD',
+    ]);
+  }
+  return m;
+}
+
+function renderKO() {
+  const w = document.getElementById('koWrap');
+  const rounds = [
+    {key:'r32',label:'Round of 32',pts:50,matches:r32Matches()},
+    {key:'r16',label:'Round of 16',pts:70,matches:roundMatches('r16')},
+    {key:'r8', label:'Quarter Finals',pts:80,matches:roundMatches('r8')},
+    {key:'r4', label:'Semi Finals',pts:90,matches:roundMatches('r4')},
+    {key:'final',label:'The Final',pts:100,matches:roundMatches('final')},
+  ];
+  let html = '';
+  rounds.forEach(({key,label,pts,matches}) => {
+    html += `<div class="bracket-stage">
+      <div class="stage-header"><div class="stage-title">${label}</div><div class="stage-pts">+${pts} PTS</div></div>
+      <div class="knockout-grid">`;
+    matches.forEach((m,mi) => {
+      const pk=key+'_'+mi, t1=m[0]||'TBD', t2=m[1]||'TBD';
+      const tb1=t1==='TBD', tb2=t2==='TBD';
+      const sel=state[key]?.[pk], aw=adminResults[key]?.[pk];
+      html += `<div class="ko-match">
+        <div class="ko-match-label">${label} · M${mi+1}</div>
+        <div class="ko-team${tb1?' tbd':sel===t1?' selected':''}" onclick="pickKO('${key}',${mi},'${t1}')">
+          <div class="ko-team-name">${tb1?'⏳ TBD':getFlag(t1)+' '+t1}</div>
+          ${aw===t1?'<span style="color:var(--accent);font-size:12px;font-weight:800">✓</span>':''}
+        </div>
+        <div style="text-align:center;font-size:9px;color:var(--muted);padding:1px">VS</div>
+        <div class="ko-team${tb2?' tbd':sel===t2?' selected':''}" onclick="pickKO('${key}',${mi},'${t2}')">
+          <div class="ko-team-name">${tb2?'⏳ TBD':getFlag(t2)+' '+t2}</div>
+          ${aw===t2?'<span style="color:var(--accent);font-size:12px;font-weight:800">✓</span>':''}
+        </div>
+        ${sel&&!tb1&&!tb2?`<div style="font-size:10px;color:var(--accent);padding-top:3px;font-family:var(--font-head)">Pick: ${getFlag(sel)} ${sel}</div>`:''}
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  w.innerHTML = html; addSaveBtn(w);
+}
+
+function pickKO(round, idx, team) {
+  if (team==='TBD') return;
+  if (isClosed()&&!adminMode) return showToast('Challenge is closed');
+  if (!currentKey) return showToast('Enter your name first');
+  if (!state[round]) state[round] = {};
+  state[round][round+'_'+idx] = team;
+  persist(); renderKO();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPECIALS
+// ═══════════════════════════════════════════════════════════════
+function renderSpecials() {
+  const w = document.getElementById('spWrap');
+  const sc=allPlayers('scorer'), kp=allPlayers('keeper');
+  const sp=state.specials||{}, closed=isClosed(), ar=adminResults;
+  function sel(id, players, val, fn) {
+    return `<select id="${id}" onchange="${fn}" ${closed?'disabled':''}><option value="">— Select —</option>` +
+      players.map(p=>`<option value="${p.name}" ${val===p.name?'selected':''}>${p.flag} ${p.name} (${p.team})</option>`).join('') + '</select>';
+  }
+  w.innerHTML = `<div class="specials-grid">
+    <div class="special-card"><h3>⚽ Top Goal Scorer</h3>
+      <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('ss',sc,sp.scorer,"pickSp('scorer',this.value)")}</div>
+      <div><div class="select-label">Predicted Goals</div><input type="number" value="${sp.scorerGoals||''}" min="0" max="20" placeholder="e.g. 7" onchange="pickSpN('scorerGoals',this.value)" ${closed?'disabled':''}></div>
+      ${ar.topScorer?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">⚽ Actual: ${ar.topScorer.player} (${ar.topScorer.goals||'?'} goals)</div>`:''}
+    </div>
+    <div class="special-card"><h3>🎯 Top Assist Provider</h3>
+      <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('sa',sc,sp.assister,"pickSp('assister',this.value)")}</div>
+      <div><div class="select-label">Predicted Assists</div><input type="number" value="${sp.assisterAssists||''}" min="0" max="15" placeholder="e.g. 5" onchange="pickSpN('assisterAssists',this.value)" ${closed?'disabled':''}></div>
+      ${ar.topAssist?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🎯 Actual: ${ar.topAssist.player} (${ar.topAssist.assists||'?'} assists)</div>`:''}
+    </div>
+    <div class="special-card"><h3>🧤 Top Saves (Keeper)</h3>
+      <div style="margin-bottom:10px"><div class="select-label">Goalkeeper</div>${sel('sk',kp,sp.keeper,"pickSp('keeper',this.value)")}</div>
+      <div><div class="select-label">Predicted Saves</div><input type="number" value="${sp.keeperSaves||''}" min="0" max="100" placeholder="e.g. 28" onchange="pickSpN('keeperSaves',this.value)" ${closed?'disabled':''}></div>
+      ${ar.topKeeper?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🧤 Actual: ${ar.topKeeper.player} (${ar.topKeeper.saves||'?'} saves)</div>`:''}
+    </div>
+  </div>`; addSaveBtn(w);
+}
+function pickSp(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=v;persist();}
+function pickSpN(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=parseInt(v)||0;persist();}
+
+// ═══════════════════════════════════════════════════════════════
+// LEADERBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderLeaderboard() {
+  const w = document.getElementById('lbWrap');
+  if (!allEntries.length) {
+    w.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted)"><div style="font-size:44px;margin-bottom:8px">🏆</div><div style="font-family:var(--font-head);font-size:20px">No entries yet — be the first!</div></div>';
+    return;
+  }
+  const scored = allEntries.map(e=>({...e,...score(e)})).sort((a,b)=>(b.pts+b.bonus)-(a.pts+a.bonus));
+  const rkc = r => r===1?'r1':r===2?'r2':r===3?'r3':'';
+  const rke = r => r===1?'🥇':r===2?'🥈':r===3?'🥉':r;
+  w.innerHTML = `
+    <div class="sync-bar"><div class="spinner"></div>&nbsp;Live · ${scored.length} entries · ${new Date().toLocaleTimeString()}</div>
+    <div class="lb-wrap"><table class="lb-table">
+      <thead><tr><th>#</th><th>Participant</th><th>Total</th><th>Groups</th><th>Bracket</th><th>Bonus</th></tr></thead>
+      <tbody>` +
+    scored.map((e,i)=>{
+      const rank=i+1,total=e.pts+e.bonus;
+      const bracket=(e.r32c||0)*50+(e.r16c||0)*70+(e.r8c||0)*80+(e.r4c||0)*90+(e.fc||0)*100;
+      const grp=(e.gc||0)*30;
+      const me=e.key===currentKey;
+      return `<tr class="${me?'me':''}">
+        <td><div class="lb-rank ${rkc(rank)}">${rke(rank)}</div></td>
+        <td>${e.name}${me?' <span style="font-size:10px;color:var(--accent)">(you)</span>':''}</td>
+        <td class="lb-pts">${total}</td>
+        <td class="lb-sub">${grp}</td>
+        <td class="lb-sub">${bracket}</td>
+        <td class="lb-bonus">${e.bonus>0?'+'+e.bonus:'—'}</td>
+      </tr>`;
+    }).join('') +
+    '</tbody></table></div>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHARE
+// ═══════════════════════════════════════════════════════════════
+function renderShare() {
+  const url = 'https://kanakamteja.github.io/FIFA-Bracket-Challenge/';
+  const iframe = `<iframe\n  src="${url}"\n  width="100%"\n  height="900"\n  frameborder="0"\n  style="border:none;border-radius:10px"\n  title="Caterpillar FIFA 2026"\n></iframe>`;
+  document.getElementById('shareWrap').innerHTML = `<div style="max-width:700px;margin:0 auto">
+    <div class="share-card">
+      <h3>🔗 Direct Link</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Share via email, Teams</p>
+      <div class="code-box" id="urlBox">${url}</div>
+      <button class="btn btn-primary btn-sm" onclick="copyEl('urlBox')">Copy Link</button>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════════════════════════════════
+function renderAdmin() {
+  const w = document.getElementById('adminWrap');
+  w.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn btn-secondary btn-sm" onclick="toggleAdmin()">&#128272; ${adminMode?'Lock Admin':'Unlock Admin'}</button>
+      <span style="font-size:12px;color:${adminMode?'var(--accent)':'var(--muted)'}">${adminMode?'Admin unlocked':'Locked'}</span>
+    </div>
+    <div class="admin-panel${adminMode?' open':''}" id="ap">
+      <div class="admin-section-title">Group Stage Results</div>
+      <div class="groups-grid">` +
+    Object.keys(GROUPS).map(g => {
+      const {teams,flags} = GROUPS[g];
+      return `<div class="group-card"><div class="group-header"><div class="group-letter">Group ${g}</div></div>` +
+        GROUP_MATCHES[g].map((m,i)=>{
+          const k=g+'_'+i, res=adminResults.groups?.[k];
+          const f0=flags[teams.indexOf(m[0])],f1=flags[teams.indexOf(m[1])];
+          return `<div class="match-row" style="flex-wrap:wrap;gap:4px">
+            <span class="match-num" style="width:100%;font-size:9px;color:var(--muted)">M${i+1}: ${m[0]} v ${m[1]}</span>
+            <button class="team-btn${res===0?' selected':''}" onclick="agr('${g}',${i},0)" style="font-size:10px;padding:4px">${f0} W</button>
+            <button class="team-btn${res===2?' selected':''}" onclick="agr('${g}',${i},2)" style="font-size:10px;padding:4px">Draw</button>
+            <button class="team-btn${res===1?' selected':''}" onclick="agr('${g}',${i},1)" style="font-size:10px;padding:4px">${f1} W</button>
+          </div>`;
+        }).join('') + '</div>';
+    }).join('') +
+    `</div>
+      <div class="admin-section-title">Knockout Winners (type team name exactly)</div>
+      <div class="groups-grid">` +
+    ['r32','r16','r8','r4','final'].map(round=>{
+      const label={r32:'R32',r16:'R16',r8:'QF',r4:'SF',final:'Final'}[round];
+      const res=adminResults[round]||{}, cnt={r32:16,r16:8,r8:4,r4:2,final:1}[round];
+      return `<div class="group-card"><div class="group-header"><div class="group-letter" style="font-size:14px">${label}</div></div>` +
+        Array.from({length:cnt},(_,i)=>`<div class="match-row"><span class="match-num">M${i+1}</span>
+          <input type="text" placeholder="Winner" value="${res[round+'_'+i]||''}" onchange="ako('${round}',${i},this.value)" style="font-size:11px;padding:5px">
+        </div>`).join('') + '</div>';
+    }).join('') +
+    `</div>
+      <div class="admin-section-title">Special Awards — Actual Results</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:14px">
+        <div>
+          <div class="field-label">Top Scorer</div>
+          <input type="text" value="${adminResults.topScorer?.player||''}" onchange="asp('topScorer','player',this.value)" placeholder="Player name" style="margin-bottom:5px">
+          <div class="field-label">Goals</div>
+          <input type="number" value="${adminResults.topScorer?.goals||''}" onchange="asp('topScorer','goals',+this.value)" min="0">
+        </div>
+        <div>
+          <div class="field-label">Top Assist</div>
+          <input type="text" value="${adminResults.topAssist?.player||''}" onchange="asp('topAssist','player',this.value)" placeholder="Player name" style="margin-bottom:5px">
+          <div class="field-label">Assists</div>
+          <input type="number" value="${adminResults.topAssist?.assists||''}" onchange="asp('topAssist','assists',+this.value)" min="0">
+        </div>
+        <div>
+          <div class="field-label">Top Keeper</div>
+          <input type="text" value="${adminResults.topKeeper?.player||''}" onchange="asp('topKeeper','player',this.value)" placeholder="Player name" style="margin-bottom:5px">
+          <div class="field-label">Saves</div>
+          <input type="number" value="${adminResults.topKeeper?.saves||''}" onchange="asp('topKeeper','saves',+this.value)" min="0">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="persistAdmin()">&#128190; Save All Results</button>
+    </div>`;
+}
+
+function toggleAdmin() {
+  if (adminMode) { adminMode=false; renderAdmin(); return; }
+  const pw = prompt('Admin password:');
+  if (pw==='CfH2026!') { adminMode=true; showToast('Admin unlocked'); }
+  else showToast('Wrong password');
+  renderAdmin();
+}
+function agr(g,i,v){if(!adminResults.groups)adminResults.groups={};adminResults.groups[g+'_'+i]=v;renderAdmin();}
+function ako(r,i,v){if(!adminResults[r])adminResults[r]={};adminResults[r][r+'_'+i]=v.trim();}
+function asp(c,f,v){if(!adminResults[c])adminResults[c]={};adminResults[c][f]=v;}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+(async () => {
+  await dbInit();
+  await loadAll();
+  renderEntry();
+  startAutoRefresh();
+})();
+</script>
+</body>
+</html>
