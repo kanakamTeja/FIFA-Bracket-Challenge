@@ -1365,11 +1365,30 @@ function toggleAdmin() {
     setTimeout(() => document.getElementById('adminPwInput')?.focus(), 50);
   }
 }
-function doAdminLogin() {
-  const pw = document.getElementById('adminPwInput')?.value || '';
-  if (pw === 'CfH2026!') { adminMode = true; showAdminPwPrompt=false; showToast('Admin unlocked'); renderAdmin(); }
-  else { showToast('Wrong password'); document.getElementById('adminPwInput').value = ''; }
+const CORRECT_PASSWORD_HASH = "083b22b6ab27d0feeb059ba16c7d8f8eac42277b47778fc66119a9ca9ba24811";
+
+async function hashPassword(string) {
+  const utf8 = new TextEncoder().encode(string);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+async function doAdminLogin() {
+  const pw = document.getElementById('adminPwInput')?.value || '';
+  const typedHash = await hashPassword(pw);
+
+  if (typedHash === CORRECT_PASSWORD_HASH) { 
+    adminMode = true; 
+    showAdminPwPrompt = false; 
+    showToast('Admin unlocked'); 
+    renderAdmin(); 
+  } else { 
+    showToast('Wrong password'); 
+    document.getElementById('adminPwInput').value = ''; 
+  }
+}
+
 function agr(g,i,v){if(!adminResults.groups)adminResults.groups={};adminResults.groups[g+'_'+i]=v;renderAdmin();}
 function ako(r,i,v){if(!adminResults[r])adminResults[r]={};adminResults[r][r+'_'+i]=v.trim();}
 function asp(c,f,v){if(!adminResults[c])adminResults[c]={};adminResults[c][f]=v;}
