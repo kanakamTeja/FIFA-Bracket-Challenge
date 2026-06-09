@@ -73,13 +73,13 @@ select option{background:#1a1a1a}
 .group-title{font-family:var(--font-head);font-size:11px;letter-spacing:.3px;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .match-row{padding:8px 13px;border-bottom:1px solid #2e2e2e;display:flex;align-items:center;gap:6px}
 .match-row:last-of-type{border-bottom:none}
-.team-btn{flex:1;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-head);font-size:11px;font-weight:700;padding:5px 7px;cursor:pointer;transition:all .2s;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-btn{flex:1;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font-head);font-size:13px;font-weight:700;padding:6px 8px;cursor:pointer;transition:all .2s;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .team-btn:hover{border-color:var(--accent);color:var(--accent)}
 .team-btn.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
-.team-btn.draw{flex:0 0 64px;padding:5px 8px;font-size:11px;margin-left:auto}
+.team-btn.draw{flex:0 0 68px;padding:6px 8px;font-size:13px;margin-left:auto}
 .team-btn.draw.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
-.vs-badge{font-family:var(--font-head);font-size:9px;color:var(--muted);min-width:18px;text-align:center}
-.match-num{font-size:9px;color:var(--muted);min-width:16px}
+.vs-badge{font-family:var(--font-head);font-size:10px;color:var(--muted);min-width:18px;text-align:center}
+.match-num{font-size:10px;color:var(--muted);min-width:16px}
 .progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:7px 0}
 .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
 
@@ -90,12 +90,12 @@ select option{background:#1a1a1a}
 .stage-pts{font-size:11px;color:var(--accent-text);background:var(--accent);border-radius:4px;padding:2px 9px;font-family:var(--font-head);letter-spacing:1px;font-weight:800}
 .knockout-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:9px}
 .ko-match{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px;display:flex;flex-direction:column;gap:6px}
-.ko-match-label{font-size:9px;color:var(--muted);font-family:var(--font-head);letter-spacing:1px}
-.ko-team{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--border);border-radius:5px;cursor:pointer;transition:all .2s}
+.ko-match-label{font-size:10px;color:var(--muted);font-family:var(--font-head);letter-spacing:1px}
+.ko-team{display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid var(--border);border-radius:5px;cursor:pointer;transition:all .2s}
 .ko-team:hover:not(.tbd){border-color:var(--accent)}
 .ko-team.selected{background:rgba(255,205,17,.11);border-color:var(--accent)}
 .ko-team.tbd{cursor:default;opacity:.38}
-.ko-team-name{font-family:var(--font-head);font-size:13px;font-weight:700;flex:1}
+.ko-team-name{font-family:var(--font-head);font-size:15px;font-weight:700;flex:1}
 
 /* LEADERBOARD */
 .lb-wrap{margin-top:14px;overflow-x:auto}
@@ -523,15 +523,23 @@ let isDirty = false;
 // ═══════════════════════════════════════════════════════════════
 // BACKEND HELPERS
 // ═══════════════════════════════════════════════════════════════
+function setBackendDown(reason) {
+  backendReady = false;
+  const pill = document.getElementById('backendPill');
+  if (pill) { pill.classList.remove('connected'); }
+  const lbl = document.getElementById('backendLabel');
+  if (lbl) lbl.textContent = reason || 'offline';
+}
+
 async function dbInit() {
   try {
     await DB.init();
     backendReady = true;
     const pill = document.getElementById('backendPill');
     pill.classList.add('connected');
-    document.getElementById('backendLabel').textContent =  'connected';
+    document.getElementById('backendLabel').textContent = 'connected';
   } catch(e) {
-    document.getElementById('backendLabel').textContent = 'offline (local only)';
+    setBackendDown('offline — CORS error, picks saved locally');
     console.warn('Backend init failed:', e);
   }
 }
@@ -554,7 +562,10 @@ async function loadAll() {
         if (idx >= 0) allEntries[idx] = JSON.parse(JSON.stringify(state));
       }
     }
-  } catch(e) { console.warn('loadAll error', e); }
+  } catch(e) {
+    setBackendDown('offline — CORS error, picks saved locally');
+    console.warn('loadAll error', e);
+  }
 }
 
 async function persist() {
@@ -759,21 +770,90 @@ function browseEntries() {
       ? '<div class="note">No entries yet — be the first!</div>'
       : allEntries.map(e => {
           const ini = e.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+          const isOwn = e.key === currentKey;
+          const tag = isOwn
+            ? '<span style="font-size:10px;color:var(--accent);margin-left:5px">(you)</span>'
+            : '<span style="font-size:10px;color:var(--muted);margin-left:5px">view only</span>';
           return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="viewEntry('${e.key}')">
             <div style="width:30px;height:30px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:11px;font-weight:900;color:var(--accent-text)">${ini}</div>
-            <div style="font-family:var(--font-head);font-size:14px">${e.name}</div>
+            <div style="font-family:var(--font-head);font-size:14px">${e.name}${tag}</div>
             <div style="margin-left:auto;font-size:10px;color:var(--muted)">${new Date(e.savedAt||0).toLocaleDateString()}</div>
           </div>`;
         }).join('');
   } else { box.style.display = 'none'; }
 }
 
+let viewingKey = null; // key of entry being viewed in read-only mode
+
 function viewEntry(key) {
   const e = allEntries.find(x => x.key === key);
   if (!e) return;
-  currentKey = key; state = JSON.parse(JSON.stringify(e));
-  sessionStorage.setItem('cfr_key', key);
-  renderEntry(); showToast("Viewing " + e.name + "'s picks");
+  const isOwn = key === currentKey;
+  const canEdit = isOwn || adminMode;
+  if (canEdit) {
+    // Restore own session or admin takes over the entry
+    currentKey = key;
+    state = JSON.parse(JSON.stringify(e));
+    sessionStorage.setItem('cfr_key', key);
+    viewingKey = null;
+    renderEntry();
+    showToast('Switched to ' + e.name + "'s entry");
+  } else {
+    // Read-only preview — don't touch currentKey / sessionStorage / state
+    viewingKey = key;
+    renderViewOnly(e);
+    showToast("Viewing " + e.name + "'s picks (read-only)");
+  }
+}
+
+function renderViewOnly(e) {
+  const w = document.getElementById('entryWrap');
+  const ini = e.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  const grps = e.groups || {}, ko = ['r32','r16','r8','r4','final'];
+  let picksHtml = '<div style="margin-top:16px">';
+  // Group picks summary
+  let groupRows = '';
+  Object.keys(GROUPS).forEach(g => {
+    GROUP_MATCHES[g].forEach((m, i) => {
+      const v = grps[g+'_'+i];
+      if (v === undefined) return;
+      const winner = v===0 ? m[0] : v===1 ? m[1] : 'Draw';
+      groupRows += `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--muted)">#${m[2]} ${m[0]} v ${m[1]}</span>
+        <span style="color:var(--accent);font-family:var(--font-head);font-weight:700">${winner==='Draw'?'Draw':getFlag(winner)+' '+winner}</span>
+      </div>`;
+    });
+  });
+  picksHtml += `<div style="font-family:var(--font-head);font-size:11px;letter-spacing:2px;color:var(--accent);margin-bottom:8px">GROUP PICKS (${Object.keys(grps).length}/72)</div>${groupRows}`;
+  // Knockout picks summary
+  ko.forEach(r => {
+    const picks = e[r] || {}, label = {r32:'R32',r16:'R16',r8:'QF',r4:'SF',final:'Final'}[r];
+    const vals = Object.values(picks);
+    if (!vals.length) return;
+    picksHtml += `<div style="font-family:var(--font-head);font-size:11px;letter-spacing:2px;color:var(--accent);margin:10px 0 6px">${label}</div>`;
+    vals.forEach(t => {
+      picksHtml += `<div style="font-size:13px;padding:3px 0;border-bottom:1px solid var(--border)">${getFlag(t)} ${t}</div>`;
+    });
+  });
+  picksHtml += '</div>';
+  w.innerHTML = `<div class="box">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+      <div style="width:50px;height:50px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:20px;font-weight:900;color:var(--accent-text)">${ini}</div>
+      <div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800">${e.name}</div>
+        <div style="font-size:12px;color:var(--muted)">Read-only view — you cannot edit this entry</div>
+      </div>
+    </div>
+    <div class="err-note" style="background:rgba(255,77,109,.05)">&#128274; You are viewing someone else's entry. Switch to your own picks using the button below.</div>
+    <button class="btn btn-primary" onclick="returnToOwnEntry()" style="margin-bottom:12px">← Back to My Picks</button>
+    ${picksHtml}
+  </div>`;
+  emojiUpdate(w);
+}
+
+function returnToOwnEntry() {
+  viewingKey = null;
+  renderEntry();
 }
 
 function resetEntry() {
@@ -836,6 +916,7 @@ function renderGroups() {
 function pickGroup(g, i, side) {
   if (isClosed()&&!adminMode) return showToast('Challenge is closed');
   if (!currentKey) return showToast('Enter your name first');
+  if (viewingKey) return showToast('Read-only view - switch to your own entry to make picks');
   if (!state.groups) state.groups = {};
   state.groups[g+'_'+i] = side;
   markDirty(); renderGroups();
@@ -1084,6 +1165,7 @@ function pickKO(round, idx, team) {
   if (team==='TBD') return;
   if (isClosed()&&!adminMode) return showToast('Challenge is closed');
   if (!currentKey) return showToast('Enter your name first');
+  if (viewingKey) return showToast('Read-only view -switch to your own entry to make picks');
   if (!state[round]) state[round] = {};
   state[round][round+'_'+idx] = team;
   markDirty(); renderKO();
