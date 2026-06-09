@@ -12,7 +12,7 @@ const BACKEND    = 'jsonbin';
 const JSONBIN_ID  = '6a265a92da38895dfe97e649';
 const JSONBIN_KEY = '$2a$10$LyKPGnl9d6x34zWcAIOjmuXeKxmyvXt7T53xVR8ZnMFXtqupRrBjy';
 </script>
-<script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <!-- ═══════════════════════════════════════════════════════════ -->
 
 <style>
@@ -162,7 +162,7 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
 <body>
 <div id="app">
   <div class="hero">
-    <div class="hero-badge"><span class="cat-logo" role="img" aria-label="Caterpillar logo"></span> Caterpillar FIFA Challenge</div>
+    <div class="hero-badge"><span class="cat-logo" role="img" aria-label="Caterpillar logo"></span> Caterpillar World Cup Challenge</div>
     <h1>2026 FIFA<br><span>World Cup</span></h1>
     <div class="hero-sub">Bracket Challenge &nbsp;·&nbsp; USA &nbsp;·&nbsp; Mexico &nbsp;·&nbsp; Canada</div>
     <div class="deadline-badge">&#9200; Closes June 11, 2026 &nbsp;·&nbsp; 12:00 PM ET</div><br>
@@ -515,8 +515,10 @@ let allEntries = [];
 let adminResults = {};
 let currentKey = null;
 let adminMode = false;
+let showAdminPwPrompt = false;
 let backendReady = false;
 let syncTimer = null;
+let isDirty = false;
 
 // ═══════════════════════════════════════════════════════════════
 // BACKEND HELPERS
@@ -544,7 +546,13 @@ async function loadAll() {
     if (saved) {
       currentKey = saved;
       const mine = allEntries.find(e => e.key === saved);
-      if (mine) state = JSON.parse(JSON.stringify(mine));
+      // Don't overwrite unsaved picks — only restore from backend when clean
+      if (mine && !isDirty) state = JSON.parse(JSON.stringify(mine));
+      // Keep allEntries in sync with our local unsaved state for leaderboard accuracy
+      if (isDirty && state.key) {
+        const idx = allEntries.findIndex(e => e.key === state.key);
+        if (idx >= 0) allEntries[idx] = JSON.parse(JSON.stringify(state));
+      }
     }
   } catch(e) { console.warn('loadAll error', e); }
 }
@@ -557,6 +565,7 @@ async function persist() {
     const idx = allEntries.findIndex(e => e.key === state.key);
     if (idx >= 0) allEntries[idx] = JSON.parse(JSON.stringify(state));
     else allEntries.push(JSON.parse(JSON.stringify(state)));
+    isDirty = false;
     showToast('Saved ✓');
   } catch(e) { showToast('Save failed — check connection'); }
 }
@@ -580,30 +589,28 @@ function startAutoRefresh() {
 // UTILITIES
 // ═══════════════════════════════════════════════════════════════
 function isClosed() { return new Date() >= DEADLINE; }
+function markDirty() { isDirty = true; }
+function persistIfDirty() { if (isDirty && currentKey && state.name) persist(); }
 function showToast(m) {
   const t = document.getElementById('toast');
   t.textContent = m; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2600);
 }
 function getFlag(team) {
+  // Subdivision flags not reliably rendered as emoji on Windows — use CSS SVG fallbacks
+  if (team === 'Scotland') return '<span class="flag flag-scotland" aria-hidden="true"></span>';
+  if (team === 'England') return '<span class="flag flag-england" aria-hidden="true"></span>';
   for (const g of Object.keys(GROUPS)) {
     const i = GROUPS[g].teams.indexOf(team);
-    if (i >= 0) {
-      const flag = GROUPS[g].flags[i];
-      if (flag === '🏴') {
-        // Subdivision flags (not reliably supported on all platforms) — draw with CSS SVG
-        if (team === 'Scotland') return '<span class="flag flag-scotland" aria-hidden="true"></span>';
-        if (team === 'England') return '<span class="flag flag-england" aria-hidden="true"></span>';
-        return '🌍';
-      }
-      return flag;
-    }
+    if (i >= 0) return GROUPS[g].flags[i];
   }
   return '🌍';
 }
 function emojiUpdate(root = document.getElementById('app')) {
   if (typeof window === 'undefined' || !window.twemoji || !root) return;
-  try { twemoji.parse(root, { folder: 'svg', ext: '.svg' }); } catch (e) { /* ignore */ }
+  try {
+    twemoji.parse(root, { folder: 'svg', ext: '.svg' });
+  } catch (e) { /* ignore */ }
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function copyEl(id) {
@@ -644,34 +651,12 @@ function advancers(g) {
   return [...GROUPS[g].teams].sort((a,b) => (st[b]?.pts||0)-(st[a]?.pts||0)).slice(0,2);
 }
 
-// userAdvancers() — uses the USER'S OWN group picks to populate the bracket.
-// A team only appears in R32 if the user has actually picked it to win/draw
-// enough matches to clearly be in 1st or 2nd. If the user hasn't finished
-// picking a group yet, both slots for that group stay 'TBD'.
+// userAdvancers() — resolves 1st/2nd from user picks, respecting tiebreaks.
 function userAdvancers(g) {
-  const teams = GROUPS[g].teams;
-  const pts = {};
-  teams.forEach(t => { pts[t] = 0; });
-
-  const picks = state.groups || {};
-  const matches = GROUP_MATCHES[g];
-
-  // Only count matches the user has actually picked
-  let pickedCount = 0;
-  matches.forEach((m, i) => {
-    const k = g + '_' + i;
-    const v = picks[k];
-    if (v === 0)      { pts[m[0]] += 3; pickedCount++; }
-    else if (v === 1) { pts[m[1]] += 3; pickedCount++; }
-    // draws not offered in UI for group picks, but handle gracefully
-    else if (v === 2) { pts[m[0]]++; pts[m[1]]++; pickedCount++; }
-  });
-
-  // If the user hasn't picked all 6 matches in this group, return TBD for both slots
-  if (pickedCount < matches.length) return ['TBD', 'TBD'];
-
-  const sorted = [...teams].sort((a, b) => pts[b] - pts[a]);
-  return [sorted[0], sorted[1]];
+  const st = groupStandings(g);
+  if (!st) return ['TBD', 'TBD'];
+  const { first, second } = resolveAdvancers(g, st);
+  return [first || 'TBD', second || 'TBD'];
 }
 function score(entry) {
   let pts = 0, gc = 0, r32c = 0, r16c = 0, r8c = 0, r4c = 0, fc = 0;
@@ -710,6 +695,7 @@ function score(entry) {
 // ROUTING
 // ═══════════════════════════════════════════════════════════════
 function switchTab(name) {
+  persistIfDirty();
   const names = ['entry','groups','knockout','specials','leaderboard','share','admin'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -729,7 +715,7 @@ function renderEntry() {
     w.innerHTML = `<div class="box">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
         <div style="width:50px;height:50px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:20px;font-weight:900;color:var(--accent-text)">${ini}</div>
-        <div><div style="font-family:var(--font-head);font-size:22px;font-weight:800">${state.name}</div><div style="font-size:12px;color:var(--muted)">Entry live · auto-saves on every pick</div></div>
+        <div><div style="font-family:var(--font-head);font-size:22px;font-weight:800">${state.name}</div><div style="font-size:12px;color:var(--muted)">Entry live · saves on tab change or Save button</div></div>
       </div>
       <div class="note">Your picks are stored in the shared backend and visible to everyone on the Leaderboard tab.</div>
       ${closed?'<div class="err-note">&#9200; Challenge is now closed — no further edits.</div>':''}
@@ -737,7 +723,6 @@ function renderEntry() {
         <button class="btn btn-primary" onclick="switchTab('groups')">Edit Group Picks →</button>
         <button class="btn btn-secondary" onclick="switchTab('leaderboard')">Leaderboard</button>
         <button class="btn btn-secondary" onclick="switchTab('share')">Share / Embed</button>
-        ${!closed?'<button class="btn btn-danger" onclick="resetEntry()">Reset</button>':''}
       </div>
     </div>`;
     emojiUpdate(w);
@@ -746,7 +731,10 @@ function renderEntry() {
   w.innerHTML = `<div class="box">
     <div style="margin-bottom:18px">
       <div style="font-family:var(--font-head);font-size:26px;font-weight:900;margin-bottom:4px">Enter the Challenge</div>
-      <div style="font-size:13px;color:var(--muted)">No login needed. Your picks save to a shared backend visible to all participants.</div>
+      <div style="font-size:13px;color:var(--muted)">No login needed. Your picks save to a shared backend visible to all participants. 
+        <br> You can edit your picks during the active session, but once you submit all the picks, consider it final.
+        <br> Your Group Stage predictions will be used to auto populate the Knockout Stage. 
+        <br>So, make sure to predict all the way to the Final game.</div>
     </div>
     ${closed?'<div class="err-note">&#9200; Submissions are closed.</div>':''}
     <div class="field-row">
@@ -834,9 +822,14 @@ function renderGroups() {
     html += `<div style="padding:7px 13px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px">
       <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${Math.round(cnt/6*100)}%"></div></div>
       <span style="font-size:10px;color:var(--muted)">${cnt}/6</span>
-    </div></div>`;
+    </div>`;
+    const st = groupStandings(g);
+    if (st) html += renderGroupStandings(g, st);
+    html += '</div>';
   });
-  html += '</div>'; w.innerHTML = html; addSaveBtn(w);
+  html += '</div>';
+  html += renderWildcardSection();
+  w.innerHTML = html; addSaveBtn(w);
   emojiUpdate(w);
 }
 
@@ -845,7 +838,178 @@ function pickGroup(g, i, side) {
   if (!currentKey) return showToast('Enter your name first');
   if (!state.groups) state.groups = {};
   state.groups[g+'_'+i] = side;
-  persist(); renderGroups();
+  markDirty(); renderGroups();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GROUP STANDINGS + TIE-BREAKING + WILDCARDS
+// ═══════════════════════════════════════════════════════════════
+function groupStandings(g) {
+  const teams = GROUPS[g].teams;
+  const pts = {}, w = {}, d = {}, l = {};
+  teams.forEach(t => { pts[t] = w[t] = d[t] = l[t] = 0; });
+  const picks = state.groups || {};
+  const matches = GROUP_MATCHES[g];
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i], v = picks[g + '_' + i];
+    if (v === undefined || v === null) return null;
+    if (v === 0) { pts[m[0]] += 3; w[m[0]]++; l[m[1]]++; }
+    else if (v === 1) { pts[m[1]] += 3; w[m[1]]++; l[m[0]]++; }
+    else { pts[m[0]]++; pts[m[1]]++; d[m[0]]++; d[m[1]]++; }
+  }
+  const sorted = [...teams].sort((a, b) => pts[b] - pts[a]);
+  return { pts, w, d, l, sorted };
+}
+
+function resolveAdvancers(g, st) {
+  const tb = state.tiebreaks?.[g] || {};
+  const { pts, sorted } = st;
+  const topPts = pts[sorted[0]];
+  const tiedTop = sorted.filter(t => pts[t] === topPts);
+  let first = tiedTop.length >= 2
+    ? (tb.first && tiedTop.includes(tb.first) ? tb.first : null)
+    : sorted[0];
+  if (!first) return { first: null, second: null, tiedTop, tiedSecond: [] };
+  const remaining = sorted.filter(t => t !== first);
+  const secondPts = pts[remaining[0]];
+  const tiedSecond = remaining.filter(t => pts[t] === secondPts);
+  let second = tiedSecond.length >= 2
+    ? (tb.second && tiedSecond.includes(tb.second) ? tb.second : null)
+    : remaining[0];
+  return { first, second, tiedTop: tiedTop.length >= 2 ? tiedTop : [], tiedSecond: tiedSecond.length >= 2 ? tiedSecond : [] };
+}
+
+function renderGroupStandings(g, st) {
+  const tb = state.tiebreaks?.[g] || {};
+  const { pts, w, d, l, sorted } = st;
+  const { first, second, tiedTop, tiedSecond } = resolveAdvancers(g, st);
+
+  // Build display order: resolved 1st/2nd at top, rest by pts
+  let display = [...sorted];
+  if (first) { display = [first, ...display.filter(t => t !== first)]; }
+  if (second) {
+    const idx = display.indexOf(second);
+    if (idx !== 1) { display.splice(idx, 1); display.splice(1, 0, second); }
+  }
+
+  let html = `<div style="padding:10px 13px;border-top:2px solid rgba(255,205,17,.25);background:rgba(0,0,0,.18)">
+    <div style="font-family:var(--font-head);font-size:10px;letter-spacing:2px;color:var(--accent);margin-bottom:5px">STANDINGS</div>
+    <table style="width:100%;font-family:var(--font-head);font-size:11px;border-collapse:collapse">
+      <tr style="color:var(--muted);font-size:9px">
+        <th style="text-align:left;padding:2px 3px">#</th>
+        <th style="text-align:left;padding:2px 3px">Team</th>
+        <th style="text-align:center;padding:2px 3px">Pts</th>
+        <th style="text-align:center;padding:2px 3px">W</th>
+        <th style="text-align:center;padding:2px 3px">D</th>
+        <th style="text-align:center;padding:2px 3px">L</th>
+        <th style="text-align:center;padding:2px 3px"></th>
+      </tr>`;
+
+  display.forEach((t, idx) => {
+    const advancing = (idx === 0 && first === t) || (idx === 1 && second === t);
+    const style = advancing ? 'color:var(--accent)' : idx === 2 ? 'color:var(--muted)' : 'opacity:.45';
+    let badge = '';
+    if (advancing) badge = `<span style="font-size:8px;background:var(--accent);color:var(--accent-text);border-radius:3px;padding:1px 4px">R32</span>`;
+    else if (idx === 2) badge = `<span style="font-size:8px;color:#555">WC?</span>`;
+    html += `<tr style="${style}">
+      <td style="padding:3px">${idx+1}</td>
+      <td style="padding:3px">${getFlag(t)} ${t}</td>
+      <td style="text-align:center;padding:3px;font-weight:800">${pts[t]}</td>
+      <td style="text-align:center;padding:3px">${w[t]}</td>
+      <td style="text-align:center;padding:3px">${d[t]}</td>
+      <td style="text-align:center;padding:3px">${l[t]}</td>
+      <td style="text-align:center;padding:3px">${badge}</td>
+    </tr>`;
+  });
+  html += '</table>';
+
+  if (tiedTop.length >= 2) {
+    html += `<div style="margin-top:6px;padding:6px 8px;background:rgba(255,205,17,.08);border:1px solid rgba(255,205,17,.3);border-radius:5px">
+      <div style="font-size:9px;color:var(--accent);font-family:var(--font-head);letter-spacing:1px;margin-bottom:4px">TIE FOR 1ST — PICK WHO ADVANCES FIRST:</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${tiedTop.map(t => `<button class="team-btn${tb.first===t?' selected':''}" style="flex:none;font-size:10px;padding:4px 8px" onclick="setTiebreak('${g}','first','${t}')">${getFlag(t)} ${t}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  if (tiedSecond.length >= 2 && first) {
+    html += `<div style="margin-top:4px;padding:6px 8px;background:rgba(255,205,17,.08);border:1px solid rgba(255,205,17,.3);border-radius:5px">
+      <div style="font-size:9px;color:var(--accent);font-family:var(--font-head);letter-spacing:1px;margin-bottom:4px">TIE FOR 2ND — PICK WHO ADVANCES:</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${tiedSecond.map(t => `<button class="team-btn${tb.second===t?' selected':''}" style="flex:none;font-size:10px;padding:4px 8px" onclick="setTiebreak('${g}','second','${t}')">${getFlag(t)} ${t}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function setTiebreak(g, which, team) {
+  if (!currentKey) return showToast('Enter your name first');
+  if (!state.tiebreaks) state.tiebreaks = {};
+  if (!state.tiebreaks[g]) state.tiebreaks[g] = {};
+  state.tiebreaks[g][which] = team;
+  markDirty(); renderGroups();
+}
+
+function getThirdPlaceTeams() {
+  const thirds = [];
+  for (const g of Object.keys(GROUPS)) {
+    const st = groupStandings(g);
+    if (!st) continue;
+    const { first, second } = resolveAdvancers(g, st);
+    if (!first || !second) continue;
+    const third = st.sorted.find(t => t !== first && t !== second);
+    if (third) thirds.push({ team: third, group: g, pts: st.pts[third] });
+  }
+  return thirds;
+}
+
+function renderWildcardSection() {
+  const thirds = getThirdPlaceTeams();
+  if (thirds.length === 0) return '';
+  const wc = state.wildcards || [];
+  const total = Object.keys(GROUPS).length;
+  const progress = thirds.length < total
+    ? `${thirds.length}/${total} groups complete — more options unlock as you finish groups`
+    : `All groups complete — select exactly 8 (${wc.length}/8 selected)`;
+
+  let html = `<div style="margin-top:18px;background:var(--card);border:1px solid rgba(255,205,17,.4);border-radius:10px;padding:16px">
+    <div style="font-family:var(--font-head);font-size:15px;font-weight:800;color:var(--accent);margin-bottom:3px;letter-spacing:1px">WILDCARD PICKS</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">${progress}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px">`;
+
+  thirds.forEach(({team, group}) => {
+    const selected = wc.includes(team);
+    const disabled = !selected && wc.length >= 8;
+    html += `<button class="team-btn${selected?' selected':''}" onclick="toggleWildcard('${team}')"
+      style="display:flex;align-items:center;gap:6px;padding:7px 10px;${disabled?'opacity:.35;cursor:not-allowed':''}">
+      ${getFlag(team)} ${team}
+      <span style="margin-left:auto;font-size:9px">${selected?'✓':'Grp '+group}</span>
+    </button>`;
+  });
+
+  html += `</div>
+    <div style="margin-top:10px;font-size:11px;font-family:var(--font-head);color:${wc.length===8?'var(--accent)':'var(--muted)'}">
+      ${wc.length}/8 wildcards selected${wc.length===8?' ✓':wc.length>0?' — '+(8-wc.length)+' more needed':''}
+    </div>
+  </div>`;
+  return html;
+}
+
+function toggleWildcard(team) {
+  if (!currentKey) return showToast('Enter your name first');
+  if (isClosed() && !adminMode) return showToast('Challenge is closed');
+  if (!state.wildcards) state.wildcards = [];
+  const idx = state.wildcards.indexOf(team);
+  if (idx >= 0) {
+    state.wildcards.splice(idx, 1);
+  } else {
+    if (state.wildcards.length >= 8) { showToast('Already have 8 wildcards — deselect one first'); return; }
+    state.wildcards.push(team);
+  }
+  markDirty(); renderGroups();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -855,16 +1019,14 @@ function r32Matches() {
   const pairs = [['A','B'],['C','D'],['E','F'],['G','H'],['I','J'],['K','L']];
   const m = [];
   pairs.forEach(([g1,g2]) => {
-    const a1 = userAdvancers(g1);
-    const a2 = userAdvancers(g2);
-    // 1st of group g1 vs 2nd of group g2, and vice versa
-    // If either side is TBD (group not fully picked), the slot stays TBD
+    const a1 = userAdvancers(g1), a2 = userAdvancers(g2);
     m.push([a1[0], a2[1]]);
     m.push([a2[0], a1[1]]);
   });
-  // 4 wild-card slots — always TBD until admin sets them
-  m.push(['TBD','TBD'],['TBD','TBD'],['TBD','TBD'],['TBD','TBD']);
-  return m.slice(0, 16);
+  // 4 wildcard matches — filled from user's wildcard picks (8 teams → 4 matches)
+  const wc = state.wildcards || [];
+  for (let i = 0; i < 4; i++) m.push([wc[i*2] || 'TBD', wc[i*2+1] || 'TBD']);
+  return m; // 16 matches
 }
 function roundMatches(round) {
   const prev = {r16:'r32',r8:'r16',r4:'r8',final:'r4'}[round];
@@ -924,7 +1086,7 @@ function pickKO(round, idx, team) {
   if (!currentKey) return showToast('Enter your name first');
   if (!state[round]) state[round] = {};
   state[round][round+'_'+idx] = team;
-  persist(); renderKO();
+  markDirty(); renderKO();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -961,8 +1123,8 @@ function renderSpecials() {
   </div>`; addSaveBtn(w); 
   emojiUpdate(w);
 }
-function pickSp(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=v;persist();}
-function pickSpN(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=parseInt(v)||0;persist();}
+function pickSp(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=v;markDirty();}
+function pickSpN(f,v){if(!currentKey)return showToast('Enter your name first');if(!state.specials)state.specials={};state.specials[f]=parseInt(v)||0;markDirty();}
 
 // ═══════════════════════════════════════════════════════════════
 // LEADERBOARD
@@ -1009,7 +1171,7 @@ function renderShare() {
   document.getElementById('shareWrap').innerHTML = `<div style="max-width:700px;margin:0 auto">
     <div class="share-card">
       <h3>🔗 Direct Link</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Share via email, Teams</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Share with Friends and Family via email/messages</p>
       <div class="code-box" id="urlBox">${url}</div>
       <button class="btn btn-primary btn-sm" onclick="copyEl('urlBox')">Copy Link</button>
     </div>
@@ -1022,10 +1184,30 @@ function renderShare() {
 // ═══════════════════════════════════════════════════════════════
 function renderAdmin() {
   const w = document.getElementById('adminWrap');
+  // Build entries list outside the main template to avoid nested template issues
+  const entriesHtml = allEntries.map(e => {
+    if (!e || !e.name) return '';
+    const ini = e.name.split(' ').map(n => n[0] || '').join('').slice(0,2).toUpperCase();
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border)">' +
+      '<div style="width:26px;height:26px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:10px;font-weight:900;color:var(--accent-text)">' + ini + '</div>' +
+      '<div style="font-family:var(--font-head);font-size:13px">' + esc(e.name) + '</div>' +
+      '<div style="margin-left:auto"><button class="btn btn-danger btn-sm" onclick="adminDeleteEntry(\'' + e.key + '\')">Delete</button></div>' +
+      '</div>';
+  }).join('');
+
+  const lockBtn = adminMode
+    ? '<button class="btn btn-secondary btn-sm" onclick="toggleAdmin()">&#128272; Lock Admin</button><span style="font-size:12px;color:var(--accent);margin-left:8px">Admin unlocked</span>'
+    : '<button class="btn btn-secondary btn-sm" onclick="toggleAdmin()">&#128272; Unlock Admin</button><span style="font-size:12px;color:var(--muted);margin-left:8px">Locked</span>';
+  const pwPrompt = adminMode ? '' : (showAdminPwPrompt ?
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:8px">' +
+    '<input type="password" id="adminPwInput" placeholder="Admin password" style="width:200px" onkeydown="if(event.key===\'Enter\')doAdminLogin()">' +
+    '<button class="btn btn-primary btn-sm" onclick="doAdminLogin()">Unlock</button>' +
+    '</div>' : '');
+
   w.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <button class="btn btn-secondary btn-sm" onclick="toggleAdmin()">&#128272; ${adminMode?'Lock Admin':'Unlock Admin'}</button>
-      <span style="font-size:12px;color:${adminMode?'var(--accent)':'var(--muted)'}">${adminMode?'Admin unlocked':'Locked'}</span>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px">${lockBtn}</div>
+      ${pwPrompt}
     </div>
     <div class="admin-panel${adminMode?' open':''}" id="ap">
       <div class="admin-section-title">Group Stage Results</div>
@@ -1082,20 +1264,38 @@ function renderAdmin() {
         </div>
       </div>
       <button class="btn btn-primary" onclick="persistAdmin()">&#128190; Save All Results</button>
+      <div class="admin-section-title">Manage Entries (${allEntries.length})</div>
+      <div>${entriesHtml}</div>
     </div>`;
   emojiUpdate(w);
 }
 
 function toggleAdmin() {
-  if (adminMode) { adminMode=false; renderAdmin(); return; }
-  const pw = prompt('Admin password:');
-  if (pw==='CfH2026!') { adminMode=true; showToast('Admin unlocked'); }
-  else showToast('Wrong password');
-  renderAdmin();
+  if (adminMode) { adminMode=false; showAdminPwPrompt=false; renderAdmin(); return; }
+  showAdminPwPrompt = !showAdminPwPrompt;
+  renderAdmin(); // toggle password input field
+  if (showAdminPwPrompt) {
+    setTimeout(() => document.getElementById('adminPwInput')?.focus(), 50);
+  }
+}
+function doAdminLogin() {
+  const pw = document.getElementById('adminPwInput')?.value || '';
+  if (pw === 'CfH2026!') { adminMode = true; showAdminPwPrompt=false; showToast('Admin unlocked'); renderAdmin(); }
+  else { showToast('Wrong password'); document.getElementById('adminPwInput').value = ''; }
 }
 function agr(g,i,v){if(!adminResults.groups)adminResults.groups={};adminResults.groups[g+'_'+i]=v;renderAdmin();}
 function ako(r,i,v){if(!adminResults[r])adminResults[r]={};adminResults[r][r+'_'+i]=v.trim();}
 function asp(c,f,v){if(!adminResults[c])adminResults[c]={};adminResults[c][f]=v;}
+function adminDeleteEntry(key) {
+  if (!adminMode) return;
+  const entry = allEntries.find(e => e.key === key);
+  if (!confirm('Delete ' + (entry?.name || 'this') + "'s entry? This is permanent.")) return;
+  DB.set('entry:' + key, null).catch(() => {});
+  allEntries = allEntries.filter(e => e.key !== key);
+  if (currentKey === key) { currentKey = null; state = {}; isDirty = false; sessionStorage.removeItem('cfr_key'); }
+  renderAdmin();
+  showToast('Entry deleted');
+}
 
 // ═══════════════════════════════════════════════════════════════
 // BOOT
