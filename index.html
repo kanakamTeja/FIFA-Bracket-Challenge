@@ -180,7 +180,7 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
   </div>
 
   <div id="panel-entry"      class="panel active"><div id="entryWrap"></div></div>
-  <div id="panel-groups"     class="panel"><div class="note">Pick the winner of each match. All 6 matches per group must be filled before the bracket unlocks.</div><div id="groupsWrap"></div></div>
+  <div id="panel-groups"     class="panel"><div class="note">Pick the winner of each match. All 6 matches per group must be filled before the bracket unlocks. <strong style="color:var(--accent)">+30 points</strong> for each correct match prediction.</div><div id="groupsWrap"></div></div>
   <div id="panel-knockout"   class="panel"><div id="koWrap"></div></div>
   <div id="panel-specials"   class="panel"><div id="spWrap"></div></div>
   <div id="panel-leaderboard"class="panel"><div id="lbWrap"></div></div>
@@ -420,7 +420,7 @@ const TOP_SCORERS = {
   'Bosnia & Herz.':['E. Džeko','S. Kolasinac'],
   'Qatar':['A. Afif','M. Muntari'],
   // Group C
-  'Brazil':['Vinicius Jr','Rodrygo'],
+  'Brazil':['Vinicius Jr','Rodrygo', 'Neymar Jr'],
   'Scotland':['L. Ferguson','C. McGregor'],
   'Morocco':['Y. En-Nesyri','H. Ziyech'],
   'Haiti':['F. Éliezer','K. Laventure'],
@@ -497,12 +497,17 @@ const TOP_KEEPERS = {
   'Türkiye':['U. Çakır','A. Bayındır'],
   'Japan':['S. Gonda','K. Schmidt'],
 };
+function getEmojiFlag(team) {
+  for (const g of Object.keys(GROUPS)) {
+    const i = GROUPS[g].teams.indexOf(team);
+    if (i >= 0) return GROUPS[g].flags[i];
+  }
+  return '🌍';
+}
 function allPlayers(type) {
   const src = type==='keeper' ? TOP_KEEPERS : TOP_SCORERS;
   return Object.entries(src).flatMap(([team, players]) => {
-    const gKey = Object.keys(GROUPS).find(g => GROUPS[g].teams.includes(team));
-    const idx = gKey ? GROUPS[gKey].teams.indexOf(team) : -1;
-    const flag = gKey && idx>=0 ? GROUPS[gKey].flags[idx] : '🌍';
+    const flag = getEmojiFlag(team);
     return players.map(name => ({name, team, flag}));
   }).sort((a,b) => a.name.localeCompare(b.name));
 }
@@ -690,14 +695,14 @@ function score(entry) {
   let bonus = 0;
   if (entry.specials) {
     const sp = entry.specials, ar = adminResults;
-    if (ar.topScorer?.player  && sp.scorer===ar.topScorer.player)              bonus+=50;
-    if (ar.topScorer?.goals   !== undefined && sp.scorerGoals===ar.topScorer.goals) bonus+=25;
-    if (ar.topAssist?.player  && sp.assister===ar.topAssist.player)            bonus+=50;
-    if (ar.topAssist?.assists !== undefined && sp.assisterAssists===ar.topAssist.assists) bonus+=25;
-    if (ar.topKeeper?.player  && sp.keeper===ar.topKeeper.player)              bonus+=50;
-    if (ar.topKeeper?.saves   !== undefined && sp.keeperSaves===ar.topKeeper.saves) bonus+=25;
+    if (ar.topScorer?.player  && sp.scorer===ar.topScorer.player)              bonus+=200;
+    if (ar.topScorer?.goals   !== undefined && sp.scorerGoals===ar.topScorer.goals) bonus+=100;
+    if (ar.topAssist?.player  && sp.assister===ar.topAssist.player)            bonus+=200;
+    if (ar.topAssist?.assists !== undefined && sp.assisterAssists===ar.topAssist.assists) bonus+=100;
+    if (ar.topKeeper?.player  && sp.keeper===ar.topKeeper.player)              bonus+=200;
+    if (ar.topKeeper?.saves   !== undefined && sp.keeperSaves===ar.topKeeper.saves) bonus+=100;
     // MVP / Golden Ball
-    if (ar.mvp?.player && sp.mvp===ar.mvp.player)                               bonus+=50;
+    if (ar.mvp?.player && sp.mvp===ar.mvp.player)                               bonus+=200;
   }
   return {pts, bonus, gc, r32c, r16c, r8c, r4c, fc};
 }
@@ -1184,22 +1189,22 @@ function renderSpecials() {
   }
   w.innerHTML = `<div class="specials-grid">
     <div class="special-card"><h3>⚽ Top Goal Scorer (Golden Boot)</h3>
-      <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('ss',sc,sp.scorer,"pickSp('scorer',this.value)")}</div>
-      <div><div class="select-label">Predicted Goals</div><input type="number" value="${sp.scorerGoals||''}" min="0" max="20" placeholder="e.g. 7" onchange="pickSpN('scorerGoals',this.value)" ${closed?'disabled':''}></div>
+      <div style="margin-bottom:10px"><div class="select-label">Player <span style="font-family:var(--font-head);font-size:10px;background:rgba(255,205,17,.15);border:1px solid rgba(255,205,17,.35);color:var(--accent);border-radius:4px;padding:1px 7px;letter-spacing:1px">+200 pts</span></div>${sel('ss',sc,sp.scorer,"pickSp('scorer',this.value)")}</div>
+      <div><div class="select-label">Predicted Goals <span style="font-family:var(--font-head);font-size:10px;background:rgba(255,205,17,.15);border:1px solid rgba(255,205,17,.35);color:var(--accent);border-radius:4px;padding:1px 7px;letter-spacing:1px">+100 pts</span></div><input type="number" value="${sp.scorerGoals||''}" min="0" max="20" placeholder="e.g. 7" onchange="pickSpN('scorerGoals',this.value)" ${closed?'disabled':''}></div>
       ${ar.topScorer?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">⚽ Actual: ${ar.topScorer.player} (${ar.topScorer.goals||'?'} goals)</div>`:''}
     </div>
     <div class="special-card"><h3>🎯 Top Assist Provider (Assists Leader)</h3>
-      <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('sa',sc,sp.assister,"pickSp('assister',this.value)")}</div>
-      <div><div class="select-label">Predicted Assists</div><input type="number" value="${sp.assisterAssists||''}" min="0" max="15" placeholder="e.g. 5" onchange="pickSpN('assisterAssists',this.value)" ${closed?'disabled':''}></div>
+      <div style="margin-bottom:10px"><div class="select-label">Player <span style="font-family:var(--font-head);font-size:10px;background:rgba(255,205,17,.15);border:1px solid rgba(255,205,17,.35);color:var(--accent);border-radius:4px;padding:1px 7px;letter-spacing:1px">+200 pts</span></div>${sel('sa',sc,sp.assister,"pickSp('assister',this.value)")}</div>
+      <div><div class="select-label">Predicted Assists <span style="font-family:var(--font-head);font-size:10px;background:rgba(255,205,17,.15);border:1px solid rgba(255,205,17,.35);color:var(--accent);border-radius:4px;padding:1px 7px;letter-spacing:1px">+100 pts</span></div><input type="number" value="${sp.assisterAssists||''}" min="0" max="15" placeholder="e.g. 5" onchange="pickSpN('assisterAssists',this.value)" ${closed?'disabled':''}></div>
       ${ar.topAssist?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🎯 Actual: ${ar.topAssist.player} (${ar.topAssist.assists||'?'} assists)</div>`:''}
     </div>
     <div class="special-card"><h3>🧤 Top Saves (Golden Glove)</h3>
-      <div style="margin-bottom:10px"><div class="select-label">Goalkeeper</div>${sel('sk',kp,sp.keeper,"pickSp('keeper',this.value)")}</div>
-      <div><div class="select-label">Predicted Saves</div><input type="number" value="${sp.keeperSaves||''}" min="0" max="100" placeholder="e.g. 28" onchange="pickSpN('keeperSaves',this.value)" ${closed?'disabled':''}></div>
+      <div style="margin-bottom:10px"><div class="select-label">Goalkeeper <span style="font-family:var(--font-head);font-size:10px;background:rgba(255,205,17,.15);border:1px solid rgba(255,205,17,.35);color:var(--accent);border-radius:4px;padding:1px 7px;letter-spacing:1px">+200 pts</span></div>${sel('sk',kp,sp.keeper,"pickSp('keeper',this.value)")}</div>
+      <div><div class="select-label">Predicted Saves <span style="font-family:var(--font-head);font-size:10px;background:rgba(255,205,17,.15);border:1px solid rgba(255,205,17,.35);color:var(--accent);border-radius:4px;padding:1px 7px;letter-spacing:1px">+100 pts</span></div><input type="number" value="${sp.keeperSaves||''}" min="0" max="100" placeholder="e.g. 28" onchange="pickSpN('keeperSaves',this.value)" ${closed?'disabled':''}></div>
       ${ar.topKeeper?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🧤 Actual: ${ar.topKeeper.player} (${ar.topKeeper.saves||'?'} saves)</div>`:''}
     </div>
     <div class="special-card"><h3>🏅 Golden Ball (Best Player)</h3>
-      <div style="margin-bottom:10px"><div class="select-label">Player</div>${sel('mb',sc.concat(kp),sp.mvp,"pickSp('mvp',this.value)")}</div>
+      <div style="margin-bottom:10px"><div class="select-label">Player <span style="font-family:var(--font-head);font-size:10px;background:rgba(255,205,17,.15);border:1px solid rgba(255,205,17,.35);color:var(--accent);border-radius:4px;padding:1px 7px;letter-spacing:1px">+200 pts</span></div>${sel('mb',sc.concat(kp),sp.mvp,"pickSp('mvp',this.value)")}</div>
       ${ar.mvp?.player?`<div style="margin-top:8px;font-size:11px;color:var(--accent);font-family:var(--font-head)">🏅 Actual: ${ar.mvp.player}</div>`:''}
     </div>
   </div>`; addSaveBtn(w); 
