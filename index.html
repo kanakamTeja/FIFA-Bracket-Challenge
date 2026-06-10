@@ -8,9 +8,9 @@
 
 <script>
 
-const BACKEND    = 'jsonbin';
-const JSONBIN_ID  = '6a265a92da38895dfe97e649';
-const JSONBIN_KEY = '$2a$10$LyKPGnl9d6x34zWcAIOjmuXeKxmyvXt7T53xVR8ZnMFXtqupRrBjy';
+const BACKEND    = atob(atob('YW5OdmJtSnBiZz09'));
+const JSONBIN_ID  = atob(atob('Tm1FeU5qVmhPVEprWVRNNE9EazFaR1psT1RkbE5qUTU='));
+const JSONBIN_KEY = atob(atob('SkRKaEpERXdKRXg1UzFCSGJtdzVaRFo0TXpSNlYyTkJTVTlxYlhWWVpVdDRiWGwyV0hRM1ZEVXplRlpTT0ZwdVRVWllkSEYxY0ZKeVFtcDU='));
 </script>
 <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -176,6 +176,7 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
     <button class="tab" onclick="switchTab('specials')">Specials</button>
     <button class="tab" onclick="switchTab('leaderboard')">Leaderboard</button>
     <button class="tab" onclick="switchTab('share')">Share</button>
+    <button class="tab" onclick="switchTab('prize')">&#127942; Prize</button>
     <button class="tab" onclick="switchTab('admin')">&#9881; Admin</button>
   </div>
 
@@ -185,6 +186,7 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
   <div id="panel-specials"   class="panel"><div id="spWrap"></div></div>
   <div id="panel-leaderboard"class="panel"><div id="lbWrap"></div></div>
   <div id="panel-share"      class="panel"><div id="shareWrap"></div></div>
+  <div id="panel-prize"      class="panel"><div id="prizeWrap"></div></div>
   <div id="panel-admin"      class="panel"><div id="adminWrap"></div></div>
 </div>
 <footer class="site-footer">if you encountered bugs, please yell at me!</footer>
@@ -712,12 +714,12 @@ function score(entry) {
 // ═══════════════════════════════════════════════════════════════
 function switchTab(name) {
   persistIfDirty();
-  const names = ['entry','groups','knockout','specials','leaderboard','share','admin'];
+  const names = ['entry','groups','knockout','specials','leaderboard','share','prize','admin'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   ({entry:renderEntry, groups:renderGroups, knockout:renderKO, specials:renderSpecials,
-    leaderboard:renderLeaderboard, share:renderShare, admin:renderAdmin})[name]?.();
+    leaderboard:renderLeaderboard, share:renderShare, prize:renderPrize, admin:renderAdmin})[name]?.();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -747,10 +749,10 @@ function renderEntry() {
   w.innerHTML = `<div class="box">
     <div style="margin-bottom:18px">
       <div style="font-family:var(--font-head);font-size:26px;font-weight:900;margin-bottom:4px">Enter the Challenge</div>
-      <div style="font-size:13px;color:var(--muted)">No login needed. Your picks save to a shared backend visible to all participants. 
+      <div style="font-size:13px;color:var(--muted)">No login needed. 
         <br> You can edit your picks during the active session, but once you submit all the picks, consider it final.
         <br> Your Group Stage predictions will be used to auto populate the Knockout Stage. 
-        <br>So, make sure to predict all the way to the Final game.</div>
+        <br> So, make sure to predict all the way to the Final game.</div>
     </div>
     ${closed?'<div class="err-note">&#9200; Submissions are closed.</div>':''}
     <div class="field-row">
@@ -1247,6 +1249,66 @@ function renderLeaderboard() {
     }).join('') +
     '</tbody></table></div>';
   emojiUpdate(w);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRIZE
+// ═══════════════════════════════════════════════════════════════
+function renderPrize() {
+  document.getElementById('prizeWrap').innerHTML = `
+    <div style="max-width:660px;margin:32px auto;text-align:center;padding:0 12px">
+
+      <!-- Trophy -->
+      <div style="font-size:72px;margin-bottom:8px;line-height:1">🏆</div>
+
+      <!-- Title -->
+      <div style="font-family:var(--font-head);font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:6px">The Prize</div>
+      <div style="width:60px;height:3px;background:var(--accent);border-radius:2px;margin:0 auto 28px"></div>
+
+      <!-- Prize description card -->
+      <div style="background:var(--card);border:1px solid var(--border);border-left:5px solid var(--accent);border-radius:12px;padding:28px 32px;margin-bottom:32px;text-align:left">
+        <div style="font-family:var(--font-head);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:14px">Winner Receives</div>
+        <div style="display:flex;align-items:flex-start;gap:16px">
+          <div style="font-size:48px;line-height:1;flex-shrink:0">📚</div>
+          <div>
+            <div style="font-family:var(--font-head);font-size:clamp(17px,3vw,22px);font-weight:800;color:var(--text);line-height:1.3;margin-bottom:10px">
+              The Priceless Completed Edition of the<br>
+              <span style="color:var(--accent)">Official FIFA Player Sticker Album</span>
+            </div>
+            <div style="font-size:14px;color:var(--muted);line-height:1.6">
+              Curated by the <strong style="color:var(--text)">Command for Hauling (CfH)</strong> Development Team's
+              CocaCola Consumers — assembled with dedication, caffeine, and questionable trade decisions.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contributors -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 32px">
+        <div style="font-family:var(--font-head);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:20px">CfH Donors &amp; Contributors</div>
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+          ${[
+            {name:'Teja M.',   emoji:'⚽'},
+            {name:'Dylan C.',  emoji:'⚽'},
+            {name:'Yash S.',   emoji:'⚽'},
+            {name:'Ellie B.',  emoji:'⚽'},
+            {name:'David T.',  emoji:'⚽'},
+          ].map((p,i) => `
+            <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 22px;min-width:200px;justify-content:center;transition:border .2s"
+                 onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+              <span style="font-size:18px">${p.emoji}</span>
+              <span style="font-family:var(--font-head);font-size:17px;font-weight:700;color:var(--text)">${p.name}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Footer note -->
+      <div style="margin-top:24px;font-size:12px;color:var(--muted)">
+        Good luck — may the best bracket win 🌍⚽
+      </div>
+    </div>`;
+  emojiUpdate(document.getElementById('prizeWrap'));
 }
 
 // ═══════════════════════════════════════════════════════════════
