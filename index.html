@@ -270,8 +270,8 @@ const DB = (() => {
     const API = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
     const HDR = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY, 'X-Bin-Versioning': 'false' };
     let cache = null;
-    async function load() {
-      if (cache) return cache;
+    async function load(force) {
+      if (cache && !force) return cache;
       const r = await fetch(API + '/latest', { headers: HDR });
       const j = await r.json();
       cache = j.record || {};
@@ -284,8 +284,13 @@ const DB = (() => {
       name: 'JSONBin',
       async init() { await load(); return true; },
       async get(key) { const d = await load(); return d[key] ?? null; },
-      async set(key, val) { const d = await load(); d[key] = val; cache = d; await flush(); },
+      async set(key, val) {
+        // Re-fetch before write to reduce overwrite races between concurrent users
+        const d = await load(true);
+        d[key] = val; cache = d; await flush();
+      },
       async list(prefix) { const d = await load(); return Object.keys(d).filter(k => k.startsWith(prefix)); },
+      async invalidate() { cache = null; },
     };
   }
 })();
@@ -551,6 +556,7 @@ async function dbInit() {
 
 async function loadAll() {
   try {
+    if (DB.invalidate) await DB.invalidate();
     adminResults = await DB.get('adminResults') || {};
     const keys = await DB.list('entry:');
     const entries = await Promise.all(keys.map(k => DB.get(k)));
@@ -1278,7 +1284,7 @@ function renderAdmin() {
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border)">' +
       '<div style="width:26px;height:26px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:10px;font-weight:900;color:var(--accent-text)">' + ini + '</div>' +
       '<div style="font-family:var(--font-head);font-size:13px">' + esc(e.name) + '</div>' +
-      '<div style="margin-left:auto"><button class="btn btn-danger btn-sm" onclick="adminDeleteEntry(\'' + e.key + '\')">Delete</button></div>' +
+      '' +
       '</div>';
   }).join('');
 
@@ -1392,16 +1398,7 @@ async function doAdminLogin() {
 function agr(g,i,v){if(!adminResults.groups)adminResults.groups={};adminResults.groups[g+'_'+i]=v;renderAdmin();}
 function ako(r,i,v){if(!adminResults[r])adminResults[r]={};adminResults[r][r+'_'+i]=v.trim();}
 function asp(c,f,v){if(!adminResults[c])adminResults[c]={};adminResults[c][f]=v;}
-function adminDeleteEntry(key) {
-  if (!adminMode) return;
-  const entry = allEntries.find(e => e.key === key);
-  if (!confirm('Delete ' + (entry?.name || 'this') + "'s entry? This is permanent.")) return;
-  DB.set('entry:' + key, null).catch(() => {});
-  allEntries = allEntries.filter(e => e.key !== key);
-  if (currentKey === key) { currentKey = null; state = {}; isDirty = false; sessionStorage.removeItem('cfr_key'); }
-  renderAdmin();
-  showToast('Entry deleted');
-}
+function adminDeleteEntry(key) { /* disabled */ }
 
 // ═══════════════════════════════════════════════════════════════
 // BOOT
