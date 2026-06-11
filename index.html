@@ -165,7 +165,7 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
     <div class="hero-badge"><span class="cat-logo" role="img" aria-label="Caterpillar logo"></span> Caterpillar World Cup Challenge</div>
     <h1>2026 FIFA<br><span>World Cup</span></h1>
     <div class="hero-sub">Bracket Challenge &nbsp;·&nbsp; USA &nbsp;·&nbsp; Mexico &nbsp;·&nbsp; Canada</div>
-    <div class="deadline-badge">&#9200; Closes June 11, 2026 &nbsp;·&nbsp; 12:00 PM ET</div><br>
+    <div class="deadline-badge">&#9200; Closes June 11, 2026 &nbsp;·&nbsp; 3:00 PM CST</div><br>
     <div class="backend-pill" id="backendPill"><span class="dot"></span> <span id="backendLabel">connecting…</span></div>
   </div>
 
@@ -271,16 +271,29 @@ const DB = (() => {
     // JSONBin stores a single JSON object. We treat it as a flat key-value map.
     const API = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
     const HDR = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY, 'X-Bin-Versioning': 'false' };
+    const FETCH_OPTS = { mode: 'cors', credentials: 'omit' };
     let cache = null;
+    async function fetchWithRetry(url, opts, retries = 3) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const r = await fetch(url, opts);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r;
+        } catch(e) {
+          if (i === retries - 1) throw e;
+          await new Promise(res => setTimeout(res, 800 * (i + 1)));
+        }
+      }
+    }
     async function load(force) {
       if (cache && !force) return cache;
-      const r = await fetch(API + '/latest', { headers: HDR });
+      const r = await fetchWithRetry(API + '/latest', { ...FETCH_OPTS, headers: HDR });
       const j = await r.json();
       cache = j.record || {};
       return cache;
     }
     async function flush() {
-      await fetch(API, { method: 'PUT', headers: HDR, body: JSON.stringify(cache) });
+      await fetchWithRetry(API, { ...FETCH_OPTS, method: 'PUT', headers: HDR, body: JSON.stringify(cache) });
     }
     return {
       name: 'JSONBin',
@@ -300,7 +313,7 @@ const DB = (() => {
 // ═══════════════════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════════════════
-const DEADLINE = new Date('2026-06-11T16:00:00Z');
+const DEADLINE = new Date('2026-06-11T21:00:00Z');
 const GROUPS = {
   A:{teams:['Mexico','South Korea','South Africa','Czechia'],       flags:['🇲🇽','🇰🇷','🇿🇦','🇨🇿']},
   B:{teams:['Switzerland','Canada','Bosnia & Herz.','Qatar'],       flags:['🇨🇭','🇨🇦','🇧🇦','🇶🇦']},
@@ -551,7 +564,10 @@ async function dbInit() {
     pill.classList.add('connected');
     document.getElementById('backendLabel').textContent = 'connected';
   } catch(e) {
-    setBackendDown('offline — CORS error, picks saved locally');
+    const msg = e?.message?.includes('NetworkError') || e?.message?.includes('Failed to fetch')
+      ? 'offline — network blocked (try a different network)'
+      : 'offline — ' + (e?.message || 'connection failed');
+    setBackendDown(msg);
     console.warn('Backend init failed:', e);
   }
 }
@@ -576,7 +592,10 @@ async function loadAll() {
       }
     }
   } catch(e) {
-    setBackendDown('offline — CORS error, picks saved locally');
+    const msg = e?.message?.includes('NetworkError') || e?.message?.includes('Failed to fetch')
+      ? 'offline — CAT Network blocked (try a different network (usually CAT VPN will fix it) or a different Device))'
+      : 'offline — ' + (e?.message || 'connection failed');
+    setBackendDown(msg);
     console.warn('loadAll error', e);
   }
 }
