@@ -78,6 +78,8 @@ select option{background:#1a1a1a}
 .team-btn.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
 .team-btn.draw{flex:0 0 68px;padding:6px 8px;font-size:13px;margin-left:auto}
 .team-btn.draw.selected{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.team-btn.winner{border-color:#3ddc84;color:#3ddc84;box-shadow:inset 0 0 0 1px #3ddc84}
+.team-btn.winner.selected{background:#3ddc84;border-color:#3ddc84;color:#0c2417;box-shadow:none}
 .vs-badge{font-family:var(--font-head);font-size:10px;color:var(--muted);min-width:18px;text-align:center}
 .match-num{font-size:10px;color:var(--muted);min-width:16px}
 .progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:7px 0}
@@ -95,6 +97,9 @@ select option{background:#1a1a1a}
 .ko-team:hover:not(.tbd){border-color:var(--accent)}
 .ko-team.selected{background:rgba(255,205,17,.11);border-color:var(--accent)}
 .ko-team.tbd{cursor:default;opacity:.38}
+.ko-team.winner{border-color:#3ddc84;box-shadow:inset 0 0 0 1px #3ddc84}
+.ko-team.winner .ko-team-name{color:#3ddc84}
+.ko-team.winner.selected{background:rgba(61,220,132,.14)}
 .ko-team-name{font-family:var(--font-head);font-size:15px;font-weight:700;flex:1}
 
 /* LEADERBOARD */
@@ -121,6 +126,30 @@ select option{background:#1a1a1a}
 .special-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:18px}
 .special-card h3{font-family:var(--font-head);font-size:17px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
 .select-label{font-size:10px;color:var(--muted);font-family:var(--font-head);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+
+/* RESULTS (post-deadline pick breakdown) */
+.entry-list-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--border);background:var(--card);border-radius:9px;margin-bottom:7px;cursor:pointer;transition:all .15s}
+.entry-list-row:hover{border-color:var(--accent);transform:translateX(2px)}
+.entry-list-row.me{border-left:3px solid var(--accent);background:rgba(255,205,17,.06)}
+.entry-avatar{width:38px;height:38px;border-radius:5px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:14px;font-weight:900;color:var(--accent-text);flex-shrink:0}
+.result-section-title{font-family:var(--font-head);font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin:20px 0 9px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.result-row{display:flex;align-items:center;gap:11px;padding:8px 12px;border-radius:7px;margin-bottom:5px;border:1px solid var(--border);background:var(--card)}
+.result-row.correct{border-color:rgba(61,220,132,.55);background:rgba(61,220,132,.11)}
+.result-row.wrong{border-color:rgba(255,77,109,.45);background:rgba(255,77,109,.09)}
+.result-row.pending{opacity:.8}
+.result-badge{font-size:15px;min-width:20px;text-align:center;font-weight:900}
+.result-badge.correct{color:#3ddc84}
+.result-badge.wrong{color:var(--danger)}
+.result-badge.pending{color:var(--muted)}
+.result-meta{font-size:11px;color:var(--muted);font-family:var(--font-head);min-width:118px;line-height:1.35}
+.result-pick{flex:1;font-family:var(--font-head);font-size:15px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.result-actual{font-size:11px;color:var(--muted);text-align:right;min-width:96px;font-family:var(--font-head)}
+.result-actual b{color:#3ddc84;font-weight:700}
+.result-pts{font-family:var(--font-head);font-size:12px;font-weight:800;color:#3ddc84;min-width:42px;text-align:right}
+@media(max-width:580px){
+  .result-actual{display:none}
+  .result-meta{min-width:92px;font-size:10px}
+}
 
 /* SHARE */
 .share-card{background:var(--card);border:1px solid var(--accent);border-radius:11px;padding:18px;margin-bottom:14px}
@@ -165,7 +194,6 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
     <div class="hero-badge"><span class="cat-logo" role="img" aria-label="Caterpillar logo"></span> Caterpillar World Cup Challenge</div>
     <h1>2026 FIFA<br><span>World Cup</span></h1>
     <div class="hero-sub">Bracket Challenge &nbsp;·&nbsp; USA &nbsp;·&nbsp; Mexico &nbsp;·&nbsp; Canada</div>
-    <div class="deadline-badge">&#9200; Closes June 11, 2026 &nbsp;·&nbsp; 3:00 PM CST</div><br>
     <div class="backend-pill" id="backendPill"><span class="dot"></span> <span id="backendLabel">connecting…</span></div>
   </div>
 
@@ -173,11 +201,11 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
     <button class="tab active" onclick="switchTab('entry')">My Picks</button>
     <button class="tab" onclick="switchTab('groups')">Groups</button>
     <button class="tab" onclick="switchTab('knockout')">Knockout</button>
-    <button class="tab" onclick="switchTab('specials')">Specials</button>
+    <button class="tab" onclick="switchTab('specials')" style="display:none">Specials</button>
     <button class="tab" onclick="switchTab('leaderboard')">Leaderboard</button>
-    <button class="tab" onclick="switchTab('share')">Share</button>
+    <button class="tab" onclick="switchTab('share')" style="display:none">Share</button>
     <button class="tab" onclick="switchTab('prize')">&#127942; Prize</button>
-    <button class="tab" onclick="switchTab('admin')">&#9881; Admin</button>
+    <button class="tab" id="adminTab" onclick="switchTab('admin')" style="display:none">&#9881; Admin</button>
   </div>
 
   <div id="panel-entry"      class="panel active"><div id="entryWrap"></div></div>
@@ -618,9 +646,10 @@ async function persistAdmin() {
   catch(e) { showToast('Save failed'); }
 }
 
-// Auto-refresh leaderboard every 20s
+// Auto-refresh leaderboard every 20s — disabled once submissions close
 function startAutoRefresh() {
   clearInterval(syncTimer);
+  if (isClosed()) return; // no periodic fetching after the deadline
   syncTimer = setInterval(async () => {
     await loadAll();
     const active = document.querySelector('.tab.active');
@@ -664,7 +693,7 @@ function copyEl(id) {
   });
 }
 function addSaveBtn(wrap) {
-  if (!currentKey) return;
+  if (!currentKey || isClosed()) return; // no saving after the deadline
   const d = document.createElement('div');
   d.style.cssText = 'text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)';
   d.innerHTML = '<button class="btn btn-primary" onclick="persist()">&#128190; Save Picks</button>';
@@ -753,6 +782,8 @@ function switchTab(name) {
 function renderEntry() {
   const w = document.getElementById('entryWrap');
   const closed = isClosed();
+  // Submission window over → show the results browser (all entries) by default
+  if (closed) { renderResultsBrowser(); return; }
   if (currentKey && state.name) {
     const ini = state.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
     w.innerHTML = `<div class="box">
@@ -791,6 +822,148 @@ function renderEntry() {
     </div>
   </div>
   <div id="browseBox" style="max-width:640px;margin:10px auto;display:none"></div>`;
+  emojiUpdate(w);
+}
+
+// ── POST-DEADLINE RESULTS BROWSER ───────────────────────────────
+// Lists every entry, ranked by score. Click one to see a full
+// match-by-match breakdown with correct/incorrect highlighting.
+function renderResultsBrowser() {
+  const w = document.getElementById('entryWrap');
+  if (!allEntries.length) {
+    w.innerHTML = '<div class="box" style="text-align:center"><div style="font-size:44px;margin-bottom:8px">📋</div><div style="font-family:var(--font-head);font-size:20px;color:var(--muted)">No entries were submitted.</div></div>';
+    return;
+  }
+  const entries = [...allEntries].sort((a,b)=>(a.savedAt||0)-(b.savedAt||0));
+  let html = `<div style="max-width:680px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-family:var(--font-head);font-size:26px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--accent)">Tournament Picks</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Submissions are closed — select any participant to view their full bracket and score breakdown.</div>
+    </div>`;
+  entries.forEach((e) => {
+    const ini = e.name.split(' ').map(n=>n[0]||'').join('').slice(0,2).toUpperCase();
+    const me = e.key === currentKey;
+    html += `<div class="entry-list-row${me?' me':''}" onclick="showEntryResults('${e.key}')">
+      <div class="entry-avatar">${ini}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--font-head);font-size:16px;font-weight:700">${esc(e.name)}${me?' <span style="font-size:10px;color:var(--accent)">(you)</span>':''}</div>
+      </div>
+      <div style="color:var(--muted);font-size:18px">›</div>
+    </div>`;
+  });
+  html += '</div>';
+  w.innerHTML = html;
+  emojiUpdate(w);
+}
+
+function showEntryResults(key) {
+  const e = allEntries.find(x => x.key === key);
+  if (!e) return;
+  const w = document.getElementById('entryWrap');
+  const sc = score(e);
+  const ini = e.name.split(' ').map(n=>n[0]||'').join('').slice(0,2).toUpperCase();
+  const hasResults = adminResults.groups || adminResults.r32 || adminResults.topScorer;
+
+  // ── badge/row helper ──
+  const badge = st => `<div class="result-badge ${st}">${st==='correct'?'✓':st==='wrong'?'✗':'·'}</div>`;
+  const row = (status, meta, pick, actual, pts) =>
+    `<div class="result-row ${status}">
+      ${badge(status)}
+      <div class="result-meta">${meta}</div>
+      <div class="result-pick">${pick}</div>
+      <div class="result-actual">${actual||''}</div>
+      <div class="result-pts">${status==='correct'&&pts?'+'+pts:''}</div>
+    </div>`;
+
+  // ── GROUP STAGE — sorted by FIFA match number ──
+  const grpItems = [];
+  Object.keys(GROUPS).forEach(g => {
+    GROUP_MATCHES[g].forEach((m, i) => {
+      const k = g+'_'+i, pick = e.groups?.[k], actual = adminResults.groups?.[k];
+      const lbl = v => v===0?`${getFlag(m[0])} ${m[0]}`:v===1?`${getFlag(m[1])} ${m[1]}`:v===2?'🤝 Draw':'—';
+      let status = 'pending';
+      if (actual !== undefined && pick !== undefined) status = actual===pick ? 'correct' : 'wrong';
+      grpItems.push({
+        num: m[2],
+        html: row(status,
+          `<b style="color:var(--text)">#${m[2]}</b> · ${m[3]}<br>${m[0]} v ${m[1]}`,
+          pick===undefined ? '<span style="color:var(--muted)">No pick</span>' : lbl(pick),
+          actual!==undefined ? `Actual: <b>${lbl(actual)}</b>` : 'Pending',
+          30)
+      });
+    });
+  });
+  grpItems.sort((a,b)=>a.num-b.num);
+
+  // ── KNOCKOUT — bracket order ──
+  const koDefs = [['r32','Round of 32',50],['r16','Round of 16',70],['r8','Quarter Finals',80],['r4','Semi Finals',90],['final','The Final',100]];
+  let koHtml = '';
+  koDefs.forEach(([r,label,pts]) => {
+    const picks = e[r] || {}, res = adminResults[r] || {};
+    const keys = [...new Set([...Object.keys(picks), ...Object.keys(res)])].sort((a,b)=>{
+      return (parseInt(a.split('_')[1])||0)-(parseInt(b.split('_')[1])||0);
+    });
+    if (!keys.length) return;
+    koHtml += `<div class="result-section-title">${label}</div>`;
+    keys.forEach(k => {
+      const pick = picks[k], actual = res[k];
+      let status = 'pending';
+      if (actual !== undefined && pick !== undefined) status = actual===pick ? 'correct' : 'wrong';
+      const mi = (parseInt(k.split('_')[1])||0)+1;
+      koHtml += row(status,
+        `<b style="color:var(--text)">M${mi}</b>`,
+        pick ? `${getFlag(pick)} ${pick}` : '<span style="color:var(--muted)">No pick</span>',
+        actual ? `Actual: <b>${getFlag(actual)} ${actual}</b>` : 'Pending',
+        pts);
+    });
+  });
+
+  // ── SPECIALS ──
+  const sp = e.specials || {}, ar = adminResults;
+  const specRows = [];
+  const specDef = (icon, name, pickVal, actualObj, actualField, pts, suffix='') => {
+    if (pickVal === undefined || pickVal === '' || pickVal === null) return;
+    const actual = actualObj?.[actualField];
+    let status = 'pending';
+    if (actual !== undefined && actual !== '' && actual !== null) status = String(actual)===String(pickVal) ? 'correct' : 'wrong';
+    specRows.push(row(status,
+      `${icon} ${name}`,
+      `${pickVal}${suffix}`,
+      (actual!==undefined && actual!=='' && actual!==null) ? `Actual: <b>${actual}${suffix}</b>` : 'Pending',
+      pts));
+  };
+  specDef('⚽','Top Scorer',        sp.scorer,          ar.topScorer, 'player',  200);
+  specDef('⚽','Scorer Goals',      sp.scorerGoals,     ar.topScorer, 'goals',   100);
+  specDef('🎯','Top Assist',        sp.assister,        ar.topAssist, 'player',  200);
+  specDef('🎯','Assist Count',      sp.assisterAssists, ar.topAssist, 'assists', 100);
+  specDef('🧤','Top Keeper',        sp.keeper,          ar.topKeeper, 'player',  200);
+  specDef('🧤','Keeper Saves',      sp.keeperSaves,     ar.topKeeper, 'saves',   100);
+  specDef('🏅','Golden Ball (MVP)', sp.mvp,             ar.mvp,       'player',  200);
+
+  w.innerHTML = `<div style="max-width:680px;margin:0 auto">
+    <button class="btn btn-secondary btn-sm" onclick="renderEntry()" style="margin-bottom:14px">← All Participants</button>
+    <div class="box" style="max-width:none">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+        <div class="entry-avatar" style="width:50px;height:50px;font-size:20px">${ini}</div>
+        <div style="flex:1">
+          <div style="font-family:var(--font-head);font-size:24px;font-weight:800">${esc(e.name)}</div>
+          <div style="font-size:12px;color:var(--muted)">Submitted ${new Date(e.savedAt||0).toLocaleDateString()}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-head);font-size:30px;font-weight:900;color:var(--accent);line-height:1">${sc.pts+sc.bonus}</div>
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px">TOTAL PTS</div>
+        </div>
+      </div>
+      ${!hasResults?'<div class="note" style="margin-top:10px">Official results not yet entered — picks shown without scoring.</div>':''}
+
+      <div class="result-section-title">Group Stage</div>
+      ${grpItems.map(x=>x.html).join('') || '<div style="color:var(--muted);font-size:13px;padding:6px">No group picks.</div>'}
+
+      ${koHtml || ''}
+
+      ${specRows.length ? `<div class="result-section-title">Special Awards</div>${specRows.join('')}` : ''}
+    </div>
+  </div>`;
   emojiUpdate(w);
 }
 
@@ -923,11 +1096,10 @@ function renderGroups() {
       const f0 = getFlag(m[0]), f1 = getFlag(m[1]);
       html += `<div class="match-row">
         <span class="match-num" style="min-width:28px;text-align:center;line-height:1.2">#${m[2]}<br><span style="font-size:8px;color:var(--muted)">${m[3]}</span></span>
-        <button class="team-btn${sel===0?' selected':''}" onclick="pickGroup('${g}',${i},0)">${f0} ${m[0]}</button>
+        <button class="team-btn${sel===0?' selected':''}${ar===0?' winner':''}" onclick="pickGroup('${g}',${i},0)">${f0} ${m[0]}</button>
         <span class="vs-badge">VS</span>
-        <button class="team-btn${sel===1?' selected':''}" onclick="pickGroup('${g}',${i},1)">${f1} ${m[1]}</button>
-        ${ar!==undefined?`<span style="font-size:9px;color:var(--accent);margin-left:8px;font-family:var(--font-head)">${ar===0?'✓':ar===1?'✓':'D'}</span>`:''}
-        <button class="team-btn draw${sel===2?" selected":""}" onclick="pickGroup('${g}',${i},2)">Draw</button>
+        <button class="team-btn${sel===1?' selected':''}${ar===1?' winner':''}" onclick="pickGroup('${g}',${i},1)">${f1} ${m[1]}</button>
+        <button class="team-btn draw${sel===2?" selected":""}${ar===2?' winner':''}" onclick="pickGroup('${g}',${i},2)">Draw</button>
       </div>`;
     });
     const cnt = Object.keys(state.groups||{}).filter(k=>k.startsWith(g+'_')).length;
@@ -1175,14 +1347,14 @@ function renderKO() {
       const sel=state[key]?.[pk], aw=adminResults[key]?.[pk];
       html += `<div class="ko-match">
         <div class="ko-match-label">${label} · M${mi+1}</div>
-        <div class="ko-team${tb1?' tbd':sel===t1?' selected':''}" onclick="pickKO('${key}',${mi},'${t1}')">
+        <div class="ko-team${tb1?' tbd':sel===t1?' selected':''}${!tb1&&aw===t1?' winner':''}" onclick="pickKO('${key}',${mi},'${t1}')">
           <div class="ko-team-name">${tb1?'⏳ TBD':getFlag(t1)+' '+t1}</div>
-          ${aw===t1?'<span style="color:var(--accent);font-size:12px;font-weight:800">✓</span>':''}
+          ${aw===t1?'<span style="color:#3ddc84;font-size:12px;font-weight:800">✓</span>':''}
         </div>
         <div style="text-align:center;font-size:9px;color:var(--muted);padding:1px">VS</div>
-        <div class="ko-team${tb2?' tbd':sel===t2?' selected':''}" onclick="pickKO('${key}',${mi},'${t2}')">
+        <div class="ko-team${tb2?' tbd':sel===t2?' selected':''}${!tb2&&aw===t2?' winner':''}" onclick="pickKO('${key}',${mi},'${t2}')">
           <div class="ko-team-name">${tb2?'⏳ TBD':getFlag(t2)+' '+t2}</div>
-          ${aw===t2?'<span style="color:var(--accent);font-size:12px;font-weight:800">✓</span>':''}
+          ${aw===t2?'<span style="color:#3ddc84;font-size:12px;font-weight:800">✓</span>':''}
         </div>
         ${sel&&!tb1&&!tb2?`<div style="font-size:10px;color:var(--accent);padding-top:3px;font-family:var(--font-head)">Pick: ${getFlag(sel)} ${sel}</div>`:''}
       </div>`;
@@ -1490,6 +1662,20 @@ function adminDeleteEntry(key) { /* disabled */ }
   await loadAll();
   renderEntry();
   startAutoRefresh();
+})();
+
+(function() {
+  const SEQ = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let pos = 0;
+  document.addEventListener('keydown', (ev) => {
+    const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+    pos = (k === SEQ[pos]) ? pos + 1 : (k === SEQ[0] ? 1 : 0);
+    if (pos === SEQ.length) {
+      pos = 0;
+      const tab = document.getElementById('adminTab');
+      if (tab) { tab.style.display = ''; showToast('🔓 Admin tab unlocked'); }
+    }
+  });
 })();
 </script>
 </body>
