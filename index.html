@@ -8,9 +8,8 @@
 
 <script>
 
-const BACKEND    = atob(atob('YW5OdmJtSnBiZz09'));
-const JSONBIN_ID  = atob(atob('Tm1FeVlqazJOakZtTldZMFlXWTFaVEk1WlRRME9EVmo='));
-const JSONBIN_KEY = atob(atob('SkRKaEpERXdKRXg1UzFCSGJtdzVaRFo0TXpSNlYyTkJTVTlxYlhWWVpVdDRiWGwyV0hRM1ZEVXplRlpTT0ZwdVRVWllkSEYxY0ZKeVFtcDU='));
+const WORKER_URL  = 'https://cfr-proxy.bracket-challenge.workers.dev';
+const BACKEND     = 'worker';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -223,117 +222,36 @@ img.emoji, img[draggable="false"][src*="twemoji"], img[src*="/svg/"]{
 <script>
 // ═══════════════════════════════════════════════════════════════
 // BACKEND ABSTRACTION LAYER
-// All reads/writes go through DB.get() / DB.set() / DB.list()
-// Swap the implementation below when you pick your backend.
 // ═══════════════════════════════════════════════════════════════
 const DB = (() => {
-  // ── LOCAL (demo, no setup) ───────────────────────────────────
-  if (typeof BACKEND === 'undefined' || BACKEND === 'local') {
-    const store = {};
-    return {
-      name: 'Local (demo)',
-      async init() { return true; },
-      async get(key) { return store[key] ?? localStorage.getItem('cfr_' + key) ? JSON.parse(localStorage.getItem('cfr_' + key)) : null; },
-      async set(key, val) { store[key] = val; localStorage.setItem('cfr_' + key, JSON.stringify(val)); },
-      async list(prefix) {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('cfr_' + prefix)).map(k => k.slice(4));
-        return keys;
-      },
-    };
-  }
-
-  // ── FIREBASE ─────────────────────────────────────────────────
-  if (BACKEND === 'firebase') {
-    const FIREBASE_CDN = 'https://www.gstatic.com/firebasejs/10.12.2/';
-    let db;
-    return {
-      name: 'Firebase',
-      async init() {
-        const { initializeApp } = await import(FIREBASE_CDN + 'firebase-app.js');
-        const { getFirestore, doc, getDoc, setDoc, collection, getDocs } = await import(FIREBASE_CDN + 'firebase-firestore.js');
-        const app = initializeApp(FIREBASE_CONFIG);
-        db = getFirestore(app);
-        this._fs = { doc, getDoc, setDoc, collection, getDocs };
-        return true;
-      },
-      async get(key) {
-        const snap = await this._fs.getDoc(this._fs.doc(db, 'cfr', key));
-        return snap.exists() ? snap.data().value : null;
-      },
-      async set(key, val) {
-        await this._fs.setDoc(this._fs.doc(db, 'cfr', key), { value: val, ts: Date.now() });
-      },
-      async list(prefix) {
-        const snap = await this._fs.getDocs(this._fs.collection(db, 'cfr'));
-        return snap.docs.filter(d => d.id.startsWith(prefix)).map(d => d.id);
-      },
-    };
-  }
-
-  // ── SUPABASE ─────────────────────────────────────────────────
-  if (BACKEND === 'supabase') {
-    let client;
-    return {
-      name: 'Supabase',
-      async init() {
-        const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-        client = mod.createClient(SUPABASE_URL, SUPABASE_KEY);
-        return true;
-      },
-      async get(key) {
-        const { data } = await client.from('cfr_store').select('value').eq('key', key).single();
-        return data ? data.value : null;
-      },
-      async set(key, val) {
-        await client.from('cfr_store').upsert({ key, value: val, updated_at: new Date().toISOString() });
-      },
-      async list(prefix) {
-        const { data } = await client.from('cfr_store').select('key').like('key', prefix + '%');
-        return (data || []).map(r => r.key);
-      },
-    };
-  }
-
-  // ── JSONBIN ──────────────────────────────────────────────────
-  if (BACKEND === 'jsonbin') {
-    // JSONBin stores a single JSON object. We treat it as a flat key-value map.
-    const API = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
-    const HDR = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY, 'X-Bin-Versioning': 'false' };
-    const FETCH_OPTS = { mode: 'cors', credentials: 'omit' };
+  // ── WORKER PROXY ──────────────────────────────────────────────
+  // Master key lives in Cloudflare as a secret — never sent to the browser.
+  // Only entry:* and adminResults keys are writable; bulk overwrites blocked.
+  if (BACKEND === 'worker') {
     let cache = null;
-    async function fetchWithRetry(url, opts, retries = 3) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          const r = await fetch(url, opts);
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r;
-        } catch(e) {
-          if (i === retries - 1) throw e;
-          await new Promise(res => setTimeout(res, 800 * (i + 1)));
-        }
-      }
-    }
-    async function load(force) {
+    async function wLoad(force) {
       if (cache && !force) return cache;
-      const r = await fetchWithRetry(API + '/latest', { ...FETCH_OPTS, headers: HDR });
-      const j = await r.json();
-      cache = j.record || {};
+      const r = await fetch(WORKER_URL + '/data');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      cache = await r.json();
       return cache;
     }
-    async function flush() {
-      await fetchWithRetry(API, { ...FETCH_OPTS, method: 'PUT', headers: HDR, body: JSON.stringify(cache) });
-    }
     return {
-      name: 'JSONBin',
-      async init() { await load(); return true; },
-      async get(key) { const d = await load(); return d[key] ?? null; },
+      name: 'Worker',
+      async init()  { await wLoad(true); return true; },
+      async get(key)  { const d = await wLoad(); return d[key] ?? null; },
       async set(key, val) {
-        // Re-fetch before write to reduce overwrite races between concurrent users
-        const d = await load(true);
-        d[key] = val; cache = d; await flush();
+        const headers = { 'Content-Type': 'application/json' };
+        const pwHash = sessionStorage.getItem('cfr_admin_pw_hash');
+        if (key === 'adminResults' && pwHash) headers['X-Admin-Password'] = pwHash;
+        const r = await fetch(`${WORKER_URL}/data/${encodeURIComponent(key)}`, {
+          method: 'PUT', headers, body: JSON.stringify(val),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (cache) cache[key] = val;
       },
-      async list(prefix) { const d = await load(); return Object.keys(d).filter(k => k.startsWith(prefix)); },
-      async invalidate() { cache = null; },
+      async list(prefix)  { const d = await wLoad(); return Object.keys(d).filter(k => k.startsWith(prefix)); },
+      async invalidate()  { cache = null; },
     };
   }
 })();
@@ -1425,13 +1343,19 @@ function renderLeaderboard() {
   const scored = allEntries.map(e=>({...e,...score(e)})).sort((a,b)=>(b.pts+b.bonus)-(a.pts+a.bonus));
   const rkc = r => r===1?'r1':r===2?'r2':r===3?'r3':'';
   const rke = r => r===1?'🥇':r===2?'🥈':r===3?'🥉':r;
+  // Assign rank: tied scores share the same rank
+  const ranks = scored.reduce((acc,e,i) => {
+    const total = e.pts+e.bonus;
+    acc.push(i===0 ? 1 : total===(scored[i-1].pts+scored[i-1].bonus) ? acc[i-1] : i+1);
+    return acc;
+  }, []);
   w.innerHTML = `
     <div class="sync-bar"><div class="spinner"></div>&nbsp;Live · ${scored.length} entries · ${new Date().toLocaleTimeString()}</div>
     <div class="lb-wrap"><table class="lb-table">
       <thead><tr><th>#</th><th>Participant</th><th>Total</th><th>Groups</th><th>Bracket</th><th>Bonus</th></tr></thead>
       <tbody>` +
     scored.map((e,i)=>{
-      const rank=i+1,total=e.pts+e.bonus;
+      const rank=ranks[i],total=e.pts+e.bonus;
       const bracket=(e.r32c||0)*50+(e.r16c||0)*70+(e.r8c||0)*80+(e.r4c||0)*90+(e.fc||0)*100;
       const grp=(e.gc||0)*30;
       const me=e.key===currentKey;
@@ -1491,6 +1415,9 @@ function renderPrize() {
             {name:'Ellie B.',  emoji:'⚽'},
             {name:'David T.',  emoji:'⚽'},
             {name:'Emily M.',  emoji:'⚽'},
+            {name:'Andres M.', emoji:'⚽'},
+            {name:'Ravi M.',   emoji:'⚽'},
+            {name:'Harman S.', emoji:'⚽'},
           ].map((p,i) => `
             <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 22px;min-width:200px;justify-content:center;transition:border .2s"
                  onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -1638,14 +1565,15 @@ async function doAdminLogin() {
   const pw = document.getElementById('adminPwInput')?.value || '';
   const typedHash = await hashPassword(pw);
 
-  if (typedHash === CORRECT_PASSWORD_HASH) { 
-    adminMode = true; 
-    showAdminPwPrompt = false; 
-    showToast('Admin unlocked'); 
-    renderAdmin(); 
-  } else { 
-    showToast('Wrong password'); 
-    document.getElementById('adminPwInput').value = ''; 
+  if (typedHash === CORRECT_PASSWORD_HASH) {
+    adminMode = true;
+    showAdminPwPrompt = false;
+    sessionStorage.setItem('cfr_admin_pw_hash', typedHash);
+    showToast('Admin unlocked');
+    renderAdmin();
+  } else {
+    showToast('Wrong password');
+    document.getElementById('adminPwInput').value = '';
   }
 }
 
