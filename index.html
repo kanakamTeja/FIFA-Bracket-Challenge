@@ -247,7 +247,7 @@ const DB = (() => {
         const r = await fetch(`${WORKER_URL}/data/${encodeURIComponent(key)}`, {
           method: 'PUT', headers, body: JSON.stringify(val),
         });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) { const body = await r.text().catch(()=>''); throw new Error('HTTP ' + r.status + (body ? ': ' + body : '')); }
         if (cache) cache[key] = val;
       },
       async list(prefix)  { const d = await wLoad(); return Object.keys(d).filter(k => k.startsWith(prefix)); },
@@ -561,7 +561,7 @@ async function persist() {
 
 async function persistAdmin() {
   try { await DB.set('adminResults', adminResults); showToast('Results updated ✓'); }
-  catch(e) { showToast('Save failed'); }
+  catch(e) { showToast('Save failed: ' + (e?.message || e)); console.error('persistAdmin:', e); }
 }
 
 // Auto-refresh leaderboard every 20s — disabled once submissions close
