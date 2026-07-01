@@ -99,6 +99,13 @@ select option{background:#1a1a1a}
 .ko-team.winner{border-color:#3ddc84;box-shadow:inset 0 0 0 1px #3ddc84}
 .ko-team.winner .ko-team-name{color:#3ddc84}
 .ko-team.winner.selected{background:rgba(61,220,132,.14)}
+.ko-team.loser{border-color:rgba(255,77,109,.5);opacity:.7}
+.ko-team.loser .ko-team-name{color:var(--danger)}
+.ko-team.selected.loser{background:rgba(255,77,109,.12);border-color:var(--danger);opacity:1}
+.ko-result-win{color:#3ddc84;font-size:12px;font-weight:800;line-height:1}
+.ko-result-lose{color:var(--danger);font-size:12px;font-weight:800;line-height:1}
+.ko-pick-line{font-size:10px;padding-top:3px;font-family:var(--font-head);letter-spacing:.5px}
+.ko-pick-line.correct{color:#3ddc84}.ko-pick-line.wrong{color:var(--danger)}.ko-pick-line.warn{color:#ff9f1c}
 .ko-team-name{font-family:var(--font-head);font-size:15px;font-weight:700;flex:1}
 
 /* LEADERBOARD */
@@ -463,6 +470,36 @@ const TOP_KEEPERS = {
   'Türkiye':['U. Çakır','A. Bayındır'],
   'Japan':['S. Gonda','K. Schmidt'],
 };
+
+// ═══════════════════════════════════════════════════════════════
+// ACTUAL R32 FIXTURES — groups completed, bracket locked
+// ═══════════════════════════════════════════════════════════════
+// Each entry: [team1, team2, matchCode, date]
+const R32_FIXTURES = [
+  ['South Africa', 'Canada',         'M73', 'Jun 28'],  // 0
+  ['Germany',      'Paraguay',       'M74', 'Jun 29'],  // 1
+  ['Brazil',       'Japan',          'M76', 'Jun 29'],  // 2
+  ['Netherlands',  'Morocco',        'M75', 'Jun 29'],  // 3
+  ['France',       'Sweden',         'M77', 'Jun 30'],  // 4
+  ['Ivory Coast',  'Norway',         'M78', 'Jun 30'],  // 5
+  ['Mexico',       'Ecuador',        'M79', 'Jun 30'],  // 6
+  ['England',      'DR Congo',       'M80', 'Jul 1'],   // 7
+  ['USA',          'Bosnia & Herz.', 'M81', 'Jul 1'],   // 8
+  ['Belgium',      'Senegal',        'M82', 'Jul 1'],   // 9
+  ['Portugal',     'Croatia',        'M83', 'Jul 2'],   // 10
+  ['Spain',        'Austria',        'M84', 'Jul 2'],   // 11
+  ['Switzerland',  'Algeria',        'M85', 'Jul 2'],   // 12
+  ['Argentina',    'Cape Verde',     'M86', 'Jul 3'],   // 13
+  ['Colombia',     'Ghana',          'M87', 'Jul 3'],   // 14
+  ['Australia',    'Egypt',          'M88', 'Jul 3'],   // 15
+];
+// Bracket pairing — which prior-round match indices feed each next-round match
+// R16[i] is decided by winners of R32[a] vs R32[b]
+const R16_FROM_R32  = [[1,4],[0,3],[2,5],[6,7],[10,11],[8,9],[13,15],[12,14]];
+const R8_FROM_R16   = [[0,1],[4,5],[2,3],[6,7]];
+const R4_FROM_R8    = [[0,1],[2,3]];
+const FINAL_FROM_R4 = [[0,1]];
+
 function getEmojiFlag(team) {
   for (const g of Object.keys(GROUPS)) {
     const i = GROUPS[g].teams.indexOf(team);
@@ -657,11 +694,16 @@ function score(entry) {
       if (gRes[k] !== undefined && entry.groups?.[k] !== undefined && gRes[k] === entry.groups[k]) { pts+=30; gc++; }
     });
   });
+  // Knockout scoring: team-based — user gets points if they picked the winning team
+  // in any slot of that round, regardless of which match index they stored it under.
   [['r32',50],['r16',70],['r8',80],['r4',90],['final',100]].forEach(([r,p], ri) => {
-    const res = adminResults[r] || {}, picks = entry[r] || {};
-    Object.keys(res).forEach(k => {
-      if (picks[k] !== undefined && res[k] === picks[k]) {
-        pts+=p;
+    const res = adminResults[r] || {};
+    const pickedTeams = new Set(Object.values(entry[r] || {}).filter(Boolean));
+    const counted = new Set(); // prevent double-counting same team
+    Object.values(res).forEach(winner => {
+      if (winner && pickedTeams.has(winner) && !counted.has(winner)) {
+        counted.add(winner);
+        pts += p;
         if(ri===0)r32c++;else if(ri===1)r16c++;else if(ri===2)r8c++;else if(ri===3)r4c++;else fc++;
       }
     });
@@ -813,27 +855,67 @@ function showEntryResults(key) {
   });
   grpItems.sort((a,b)=>a.num-b.num);
 
-  // ── KNOCKOUT — bracket order ──
-  const koDefs = [['r32','Round of 32',50],['r16','Round of 16',70],['r8','Quarter Finals',80],['r4','Semi Finals',90],['final','The Final',100]];
+  // ── KNOCKOUT — team-name-based matching ──
+  const koElim = getAllEliminatedTeams();
+  const koDefs = [
+    ['r32','Round of 32',   50, r32Matches()],
+    ['r16','Round of 16',   70, roundMatches('r16')],
+    ['r8', 'Quarter Finals',80, roundMatches('r8')],
+    ['r4', 'Semi Finals',   90, roundMatches('r4')],
+    ['final','The Final',  100, roundMatches('final')],
+  ];
   let koHtml = '';
-  koDefs.forEach(([r,label,pts]) => {
-    const picks = e[r] || {}, res = adminResults[r] || {};
-    const keys = [...new Set([...Object.keys(picks), ...Object.keys(res)])].sort((a,b)=>{
-      return (parseInt(a.split('_')[1])||0)-(parseInt(b.split('_')[1])||0);
-    });
-    if (!keys.length) return;
-    koHtml += `<div class="result-section-title">${label}</div>`;
-    keys.forEach(k => {
-      const pick = picks[k], actual = res[k];
+  koDefs.forEach(([r, label, pts, fixtures]) => {
+    const res = adminResults[r] || {};
+    const confirmedWinners = new Set(Object.values(res).filter(Boolean));
+    const pickedTeams = new Set(Object.values(e[r] || {}).filter(Boolean));
+    if (!Object.keys(res).length && !pickedTeams.size) return;
+
+    const items = [];
+    const matchedPicks = new Set(); // tracks which picks were matched to a fixture slot
+
+    // ── Iterate real fixture slots ──
+    fixtures.forEach((m, mi) => {
+      const t1 = m[0] || 'TBD', t2 = m[1] || 'TBD';
+      const winner = res[r+'_'+mi];
+      const fixt   = r === 'r32' ? R32_FIXTURES[mi] : null;
+
+      // Find which team (if any) the user picked for this specific match
+      const userPick = (t1 !== 'TBD' && pickedTeams.has(t1)) ? t1
+                     : (t2 !== 'TBD' && pickedTeams.has(t2)) ? t2
+                     : null;
+      if (userPick) matchedPicks.add(userPick);
+
+      // Skip if no result and no pick for this slot
+      if (!winner && !userPick) return;
+
       let status = 'pending';
-      if (actual !== undefined && pick !== undefined) status = actual===pick ? 'correct' : 'wrong';
-      const mi = (parseInt(k.split('_')[1])||0)+1;
-      koHtml += row(status,
-        `<b style="color:var(--text)">M${mi}</b>`,
-        pick ? `${getFlag(pick)} ${pick}` : '<span style="color:var(--muted)">No pick</span>',
-        actual ? `Actual: <b>${getFlag(actual)} ${actual}</b>` : 'Pending',
-        pts);
+      if (winner && userPick)  status = userPick === winner ? 'correct' : 'wrong';
+      else if (winner && !userPick) status = 'wrong'; // missed — no pick but match decided
+
+      const meta = fixt
+        ? `<b style="color:var(--text)">${fixt[2]}</b> · ${fixt[3]}<br><span style="font-size:10px">${t1} v ${t2}</span>`
+        : `<b style="color:var(--text)">M${mi+1}</b><br><span style="font-size:10px">${t1==='TBD'?'—':t1} v ${t2==='TBD'?'—':t2}</span>`;
+      const pickDisplay = userPick
+        ? `${getFlag(userPick)} ${userPick}`
+        : '<span style="color:var(--muted)">Neither</span>';
+      items.push(row(status, meta, pickDisplay, '', pts));
     });
+
+    // ── Unmatched user picks (fixture slots are TBD — later rounds not yet seeded) ──
+    pickedTeams.forEach(team => {
+      if (matchedPicks.has(team)) return; // already shown above
+      // Determine status: admin confirmed this team won, or team is eliminated, or pending
+      let status = 'pending';
+      if (confirmedWinners.has(team)) status = 'correct';
+      else if (koElim.has(team))      status = 'wrong'; // eliminated before reaching this round
+      items.push(row(status,
+        `<b style="color:var(--text)">Pick</b>`,
+        `${getFlag(team)} ${team}`, '', pts));
+    });
+
+    if (!items.length) return;
+    koHtml += `<div class="result-section-title">${label}</div>` + items.join('');
   });
 
   // ── SPECIALS ──
@@ -1219,67 +1301,134 @@ function toggleWildcard(team) {
 // KNOCKOUT
 // ═══════════════════════════════════════════════════════════════
 function r32Matches() {
-  const pairs = [['A','B'],['C','D'],['E','F'],['G','H'],['I','J'],['K','L']];
-  const m = [];
-  pairs.forEach(([g1,g2]) => {
-    const a1 = userAdvancers(g1), a2 = userAdvancers(g2);
-    m.push([a1[0], a2[1]]);
-    m.push([a2[0], a1[1]]);
-  });
-  // 4 wildcard matches — filled from user's wildcard picks (8 teams → 4 matches)
-  const wc = state.wildcards || [];
-  for (let i = 0; i < 4; i++) m.push([wc[i*2] || 'TBD', wc[i*2+1] || 'TBD']);
-  return m; // 16 matches
+  // Return the actual locked R32 fixtures (groups stage is complete)
+  return R32_FIXTURES.map(m => [m[0], m[1]]);
 }
 function roundMatches(round) {
-  const prev = {r16:'r32',r8:'r16',r4:'r8',final:'r4'}[round];
-  if (!prev) return [['TBD','TBD']];
-  const pm = round==='r16' ? r32Matches() : roundMatches(prev);
-  const m = [];
-  for (let i=0; i<pm.length; i+=2) {
-    m.push([
-      state[prev]?.[prev+'_'+i] || adminResults[prev]?.[prev+'_'+i] || 'TBD',
-      state[prev]?.[prev+'_'+(i+1)] || adminResults[prev]?.[prev+'_'+(i+1)] || 'TBD',
-    ]);
-  }
-  return m;
+  // Use the defined bracket pairings; teams come from admin-confirmed results
+  const pairMap = {r16:R16_FROM_R32, r8:R8_FROM_R16, r4:R4_FROM_R8, final:FINAL_FROM_R4};
+  const prevKey = {r16:'r32', r8:'r16', r4:'r8', final:'r4'}[round];
+  const pairs = pairMap[round];
+  if (!pairs || !prevKey) return [['TBD','TBD']];
+  return pairs.map(([a, b]) => [
+    adminResults[prevKey]?.[prevKey+'_'+a] || 'TBD',
+    adminResults[prevKey]?.[prevKey+'_'+b] || 'TBD',
+  ]);
+}
+
+// Returns a Set of all teams eliminated so far (admin results confirmed across all rounds)
+function getAllEliminatedTeams() {
+  const elim = new Set();
+  ['r32','r16','r8','r4'].forEach(r => {
+    const res = adminResults[r] || {};
+    const fixtures = r === 'r32' ? r32Matches() : roundMatches(r);
+    fixtures.forEach((m, i) => {
+      const winner = res[r+'_'+i];
+      if (winner && m[0] !== 'TBD' && m[1] !== 'TBD') {
+        elim.add(m[0] === winner ? m[1] : m[0]);
+      }
+    });
+  });
+  return elim;
 }
 
 function renderKO() {
   const w = document.getElementById('koWrap');
+  const allElim = getAllEliminatedTeams();
+
   const rounds = [
-    {key:'r32',label:'Round of 32',pts:50,matches:r32Matches()},
-    {key:'r16',label:'Round of 16',pts:70,matches:roundMatches('r16')},
-    {key:'r8', label:'Quarter Finals',pts:80,matches:roundMatches('r8')},
-    {key:'r4', label:'Semi Finals',pts:90,matches:roundMatches('r4')},
-    {key:'final',label:'The Final',pts:100,matches:roundMatches('final')},
+    {key:'r32', label:'Round of 32',    pts:50,  matches:r32Matches()},
+    {key:'r16', label:'Round of 16',    pts:70,  matches:roundMatches('r16')},
+    {key:'r8',  label:'Quarter Finals', pts:80,  matches:roundMatches('r8')},
+    {key:'r4',  label:'Semi Finals',    pts:90,  matches:roundMatches('r4')},
+    {key:'final',label:'The Final',     pts:100, matches:roundMatches('final')},
   ];
+
+  // Build one team row inside a ko-match card
+  function teamHtml(key, mi, team, isTBD, isWin, isLose, userPicked) {
+    let cls = 'ko-team';
+    if (isTBD) cls += ' tbd';
+    else {
+      if (isWin)        cls += ' winner';
+      else if (isLose)  cls += ' loser';
+      if (userPicked)   cls += ' selected';
+    }
+    const nm    = isTBD ? '⏳ TBD' : `${getFlag(team)} ${team}`;
+    const badge = isWin  ? '<span class="ko-result-win">✓</span>'
+                : isLose ? '<span class="ko-result-lose">✗</span>' : '';
+    const safe  = isTBD ? 'TBD' : team.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="${cls}" onclick="pickKO('${key}',${mi},'${safe}')">
+      <div class="ko-team-name">${nm}</div>${badge}
+    </div>`;
+  }
+
   let html = '';
-  rounds.forEach(({key,label,pts,matches}) => {
+  rounds.forEach(({key, label, pts, matches}) => {
+    // All actual teams appearing in this round's matches
+    const roundActualTeams = new Set();
+    matches.forEach(m => { if(m[0]!=='TBD') roundActualTeams.add(m[0]); if(m[1]!=='TBD') roundActualTeams.add(m[1]); });
+
+    // User's picks for this round as a name-keyed set (team-based, not slot-based)
+    const roundPicks = state[key] || {};
+    const userPickedTeams = new Set(Object.values(roundPicks).filter(Boolean));
+
+    // Ghost picks: user has an eliminated team picked in this round that doesn't appear in any match
+    const ghostPicks = [...userPickedTeams].filter(t => allElim.has(t) && !roundActualTeams.has(t));
+    const ghostBanner = ghostPicks.length
+      ? `<div class="err-note" style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-weight:800">⚠ Eliminated picks in ${label}:</span>
+          ${ghostPicks.map(t => `<span style="color:var(--danger);font-weight:700">${getFlag(t)} ${t}</span>`).join(' · ')}
+         </div>`
+      : '';
+
     html += `<div class="bracket-stage">
       <div class="stage-header"><div class="stage-title">${label}</div><div class="stage-pts">+${pts} PTS</div></div>
+      ${ghostBanner}
       <div class="knockout-grid">`;
-    matches.forEach((m,mi) => {
-      const pk=key+'_'+mi, t1=m[0]||'TBD', t2=m[1]||'TBD';
-      const tb1=t1==='TBD', tb2=t2==='TBD';
-      const sel=state[key]?.[pk], aw=adminResults[key]?.[pk];
+
+    matches.forEach((m, mi) => {
+      const t1  = m[0] || 'TBD', t2 = m[1] || 'TBD';
+      const tb1 = t1 === 'TBD',  tb2 = t2 === 'TBD';
+      const aw  = adminResults[key]?.[key+'_'+mi]; // admin-confirmed winner
+
+      // Find user's pick for this match by team name across ALL slots in the round
+      const userPickForMatch = (!tb1 && userPickedTeams.has(t1)) ? t1
+                             : (!tb2 && userPickedTeams.has(t2)) ? t2
+                             : null;
+
+      // Match header
+      const fixt       = key === 'r32' ? R32_FIXTURES[mi] : null;
+      const matchTitle = fixt ? `${fixt[2]} · ${fixt[3]}` : `${label} · M${mi+1}`;
+
+      // Per-team visual states from admin results
+      const t1Win  = !tb1 && aw === t1;
+      const t1Lose = !tb1 && !!aw && aw !== t1;
+      const t2Win  = !tb2 && aw === t2;
+      const t2Lose = !tb2 && !!aw && aw !== t2;
+
+      // Pick status
+      const correct = userPickForMatch && !!aw && userPickForMatch === aw;
+      const wrong   = userPickForMatch && !!aw && userPickForMatch !== aw;
+      let pickLine  = '';
+      if (userPickForMatch) {
+        if (correct)        pickLine = `<div class="ko-pick-line correct">✓ Correct — ${getFlag(userPickForMatch)} ${userPickForMatch}</div>`;
+        else if (wrong)     pickLine = `<div class="ko-pick-line wrong">✗ Wrong — ${getFlag(userPickForMatch)} ${userPickForMatch}</div>`;
+        else                pickLine = `<div class="ko-pick-line" style="color:var(--accent)">Pick: ${getFlag(userPickForMatch)} ${userPickForMatch}</div>`;
+      }
+
       html += `<div class="ko-match">
-        <div class="ko-match-label">${label} · M${mi+1}</div>
-        <div class="ko-team${tb1?' tbd':sel===t1?' selected':''}${!tb1&&aw===t1?' winner':''}" onclick="pickKO('${key}',${mi},'${t1}')">
-          <div class="ko-team-name">${tb1?'⏳ TBD':getFlag(t1)+' '+t1}</div>
-          ${aw===t1?'<span style="color:#3ddc84;font-size:12px;font-weight:800">✓</span>':''}
-        </div>
-        <div style="text-align:center;font-size:9px;color:var(--muted);padding:1px">VS</div>
-        <div class="ko-team${tb2?' tbd':sel===t2?' selected':''}${!tb2&&aw===t2?' winner':''}" onclick="pickKO('${key}',${mi},'${t2}')">
-          <div class="ko-team-name">${tb2?'⏳ TBD':getFlag(t2)+' '+t2}</div>
-          ${aw===t2?'<span style="color:#3ddc84;font-size:12px;font-weight:800">✓</span>':''}
-        </div>
-        ${sel&&!tb1&&!tb2?`<div style="font-size:10px;color:var(--accent);padding-top:3px;font-family:var(--font-head)">Pick: ${getFlag(sel)} ${sel}</div>`:''}
+        <div class="ko-match-label">${matchTitle}</div>
+        ${teamHtml(key, mi, t1, tb1, t1Win, t1Lose, userPickForMatch===t1)}
+        <div style="text-align:center;font-size:9px;color:var(--muted);padding:1px 0">VS</div>
+        ${teamHtml(key, mi, t2, tb2, t2Win, t2Lose, userPickForMatch===t2)}
+        ${pickLine}
       </div>`;
     });
     html += '</div></div>';
   });
-  w.innerHTML = html; addSaveBtn(w);
+
+  w.innerHTML = html;
+  addSaveBtn(w);
   emojiUpdate(w);
 }
 
@@ -1501,16 +1650,37 @@ function renderAdmin() {
         }).join('') + '</div>';
     }).join('') +
     `</div>
-      <div class="admin-section-title">Knockout Winners (type team name exactly)</div>
+      <div class="admin-section-title">Knockout Winners — click the winning team</div>
       <div class="groups-grid">` +
-    ['r32','r16','r8','r4','final'].map(round=>{
-      const label={r32:'R32',r16:'R16',r8:'QF',r4:'SF',final:'Final'}[round];
-      const res=adminResults[round]||{}, cnt={r32:16,r16:8,r8:4,r4:2,final:1}[round];
-      return `<div class="group-card"><div class="group-header"><div class="group-letter" style="font-size:14px">${label}</div></div>` +
-        Array.from({length:cnt},(_,i)=>`<div class="match-row"><span class="match-num">M${i+1}</span>
-          <input type="text" placeholder="Winner" value="${res[round+'_'+i]||''}" onchange="ako('${round}',${i},this.value)" style="font-size:11px;padding:5px">
-        </div>`).join('') + '</div>';
-    }).join('') +
+    (() => {
+      const koRounds = [
+        {key:'r32',  label:'Round of 32',    fixtures:r32Matches()},
+        {key:'r16',  label:'Round of 16',    fixtures:roundMatches('r16')},
+        {key:'r8',   label:'Quarter Finals', fixtures:roundMatches('r8')},
+        {key:'r4',   label:'Semi Finals',    fixtures:roundMatches('r4')},
+        {key:'final',label:'The Final',      fixtures:roundMatches('final')},
+      ];
+      return koRounds.map(({key,label,fixtures}) => {
+        const res = adminResults[key] || {};
+        const rows = fixtures.map((m,i) => {
+          const t1 = m[0]||'TBD', t2 = m[1]||'TBD';
+          const winner = res[key+'_'+i];
+          const fixt = key==='r32' ? R32_FIXTURES[i] : null;
+          const mid  = fixt ? fixt[2] : `M${i+1}`;
+          const st1  = winner===t1 ? ' selected' : '';
+          const st2  = winner===t2 ? ' selected' : '';
+          const s1   = t1.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          const s2   = t2.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          return `<div class="match-row" style="flex-wrap:wrap;gap:4px">
+            <span class="match-num" style="width:100%;font-size:9px;color:var(--muted)">${mid}: ${t1} v ${t2}</span>
+            <button class="team-btn${st1}" onclick="akoBtn('${key}',${i},'${s1}')" style="font-size:10px;padding:4px 6px" ${t1==='TBD'?'disabled':''}>${getFlag(t1)} ${t1}</button>
+            <button class="team-btn${st2}" onclick="akoBtn('${key}',${i},'${s2}')" style="font-size:10px;padding:4px 6px" ${t2==='TBD'?'disabled':''}>${getFlag(t2)} ${t2}</button>
+            ${winner?`<span style="font-size:9px;color:#3ddc84;font-weight:800;margin-left:4px">✓ ${winner}</span>`:''}
+          </div>`;
+        }).join('');
+        return `<div class="group-card"><div class="group-header"><div class="group-letter" style="font-size:14px">${label}</div></div>${rows}</div>`;
+      }).join('');
+    })() +
     `</div>
       <div class="admin-section-title">Special Awards — Actual Results</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:14px">
@@ -1579,6 +1749,7 @@ async function doAdminLogin() {
 
 function agr(g,i,v){if(!adminResults.groups)adminResults.groups={};adminResults.groups[g+'_'+i]=v;renderAdmin();}
 function ako(r,i,v){if(!adminResults[r])adminResults[r]={};adminResults[r][r+'_'+i]=v.trim();}
+function akoBtn(r,i,v){if(!adminResults[r])adminResults[r]={};adminResults[r][r+'_'+i]=v;renderAdmin();}
 function asp(c,f,v){if(!adminResults[c])adminResults[c]={};adminResults[c][f]=v;}
 function adminDeleteEntry(key) { /* disabled */ }
 
