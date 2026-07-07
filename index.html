@@ -696,7 +696,7 @@ function score(entry) {
   });
   // Knockout scoring: team-based — user gets points if they picked the winning team
   // in any slot of that round, regardless of which match index they stored it under.
-  [['r32',50],['r16',70],['r8',80],['r4',90],['final',100]].forEach(([r,p], ri) => {
+  [['r32',50],['r16',70],['r8',80],['r4',90],['final',300]].forEach(([r,p], ri) => {
     const res = adminResults[r] || {};
     const pickedTeams = new Set(Object.values(entry[r] || {}).filter(Boolean));
     const counted = new Set(); // prevent double-counting same team
@@ -746,10 +746,16 @@ function renderEntry() {
   if (closed) { renderResultsBrowser(); return; }
   if (currentKey && state.name) {
     const ini = state.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+    const finalWinner = state.final?.['final_0'] || '';
+    const winnerFlag = finalWinner ? getFlag(finalWinner) : '';
     w.innerHTML = `<div class="box">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
         <div style="width:50px;height:50px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:20px;font-weight:900;color:var(--accent-text)">${ini}</div>
-        <div><div style="font-family:var(--font-head);font-size:22px;font-weight:800">${state.name}</div><div style="font-size:12px;color:var(--muted)">Entry live · saves on tab change or Save button</div></div>
+        <div>
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800">${state.name}</div>
+          <div style="font-size:12px;color:var(--muted)">Entry live · saves on tab change or Save button</div>
+          ${finalWinner ? `<div style="font-size:12px;color:var(--accent);margin-top:2px;display:flex;align-items:center;gap:4px">Championship Pick: ${finalWinner} ${winnerFlag}</div>` : ''}
+        </div>
       </div>
       <div class="note">Your picks are stored in the shared backend and visible to everyone on the Leaderboard tab.</div>
       ${closed?'<div class="err-note">&#9200; Challenge is now closed — no further edits.</div>':''}
@@ -803,10 +809,13 @@ function renderResultsBrowser() {
   entries.forEach((e) => {
     const ini = e.name.split(' ').map(n=>n[0]||'').join('').slice(0,2).toUpperCase();
     const me = e.key === currentKey;
+    const finalWinner = e.final?.['final_0'] || '';
+    const winnerFlag = finalWinner ? getFlag(finalWinner) : '';
     html += `<div class="entry-list-row${me?' me':''}" onclick="showEntryResults('${e.key}')">
       <div class="entry-avatar">${ini}</div>
       <div style="flex:1;min-width:0">
         <div style="font-family:var(--font-head);font-size:16px;font-weight:700">${esc(e.name)}${me?' <span style="font-size:10px;color:var(--accent)">(you)</span>':''}</div>
+        ${finalWinner ? `<div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-top:2px">Championship Pick: ${finalWinner} ${winnerFlag}</div>` : ''}
       </div>
       <div style="color:var(--muted);font-size:18px">›</div>
     </div>`;
@@ -823,6 +832,8 @@ function showEntryResults(key) {
   const sc = score(e);
   const ini = e.name.split(' ').map(n=>n[0]||'').join('').slice(0,2).toUpperCase();
   const hasResults = adminResults.groups || adminResults.r32 || adminResults.topScorer;
+  const finalWinner = e.final?.['final_0'] || '';
+  const winnerFlag = finalWinner ? getFlag(finalWinner) : '';
 
   // ── badge/row helper ──
   const badge = st => `<div class="result-badge ${st}">${st==='correct'?'✓':st==='wrong'?'✗':'·'}</div>`;
@@ -862,7 +873,7 @@ function showEntryResults(key) {
     ['r16','Round of 16',   70, roundMatches('r16')],
     ['r8', 'Quarter Finals',80, roundMatches('r8')],
     ['r4', 'Semi Finals',   90, roundMatches('r4')],
-    ['final','The Final',  100, roundMatches('final')],
+    ['final','The Final',  300, roundMatches('final')],
   ];
   let koHtml = '';
   koDefs.forEach(([r, label, pts, fixtures]) => {
@@ -948,6 +959,7 @@ function showEntryResults(key) {
         <div style="flex:1">
           <div style="font-family:var(--font-head);font-size:24px;font-weight:800">${esc(e.name)}</div>
           <div style="font-size:12px;color:var(--muted)">Submitted ${new Date(e.savedAt||0).toLocaleDateString()}</div>
+          ${finalWinner ? `<div style="font-size:12px;color:var(--accent);margin-top:2px;display:flex;align-items:center;gap:4px">Championship Pick: ${finalWinner} ${winnerFlag}</div>` : ''}
         </div>
         <div style="text-align:right">
           <div style="font-family:var(--font-head);font-size:30px;font-weight:900;color:var(--accent);line-height:1">${sc.pts+sc.bonus}</div>
@@ -979,9 +991,12 @@ function browseEntries() {
           const tag = isOwn
             ? '<span style="font-size:10px;color:var(--accent);margin-left:5px">(you)</span>'
             : '<span style="font-size:10px;color:var(--muted);margin-left:5px">view only</span>';
+          const finalWinner = e.final?.['final_0'] || '';
+          const winnerFlag = finalWinner ? getFlag(finalWinner) : '';
+          const winnerText = finalWinner ? ` <span style="font-size:11px;color:var(--muted);margin-left:8px">Winner: ${finalWinner} ${winnerFlag}</span>` : '';
           return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="viewEntry('${e.key}')">
             <div style="width:30px;height:30px;border-radius:4px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:11px;font-weight:900;color:var(--accent-text)">${ini}</div>
-            <div style="font-family:var(--font-head);font-size:14px">${e.name}${tag}</div>
+            <div style="font-family:var(--font-head);font-size:14px">${e.name}${tag}${winnerText}</div>
             <div style="margin-left:auto;font-size:10px;color:var(--muted)">${new Date(e.savedAt||0).toLocaleDateString()}</div>
           </div>`;
         }).join('');
@@ -1341,7 +1356,7 @@ function renderKO() {
     {key:'r16', label:'Round of 16',    pts:70,  matches:roundMatches('r16')},
     {key:'r8',  label:'Quarter Finals', pts:80,  matches:roundMatches('r8')},
     {key:'r4',  label:'Semi Finals',    pts:90,  matches:roundMatches('r4')},
-    {key:'final',label:'The Final',     pts:100, matches:roundMatches('final')},
+    {key:'final',label:'The Final',     pts:300, matches:roundMatches('final')},
   ];
 
   // Build one team row inside a ko-match card
